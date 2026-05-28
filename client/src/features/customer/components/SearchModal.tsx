@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Plus } from 'lucide-react';
-import { MOCK_PRODUCTS } from '@/utils/mockData';
 import { formatRupiah } from '@/lib/utils';
+import api from '@/lib/api';
+
+interface Product { id: number; name: string; price: number; image: string | null; description: string | null; }
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -11,26 +13,22 @@ interface SearchModalProps {
 
 const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onProductClick }) => {
   const [query, setQuery] = useState('');
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto focus ke input saat modal dibuka
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100); // Sedikit delay agar transisi modal selesai
-    } else {
-      setQuery(''); // Reset pencarian saat ditutup
-    }
+    api.get('/products').then(res => setAllProducts(res.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) { setTimeout(() => inputRef.current?.focus(), 100); }
+    else { setQuery(''); }
   }, [isOpen]);
 
-  // Simulasi Rekomendasi (3 produk acak/paling laris)
-  const recommendations = MOCK_PRODUCTS.slice(0, 3);
-
-  // Filter hasil pencarian
-  const searchResults = query.trim() === '' 
-    ? [] 
-    : MOCK_PRODUCTS.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+  const recommendations = allProducts.slice(0, 3);
+  const searchResults = query.trim() === ''
+    ? []
+    : allProducts.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <>
@@ -86,13 +84,10 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onProductCli
                 {recommendations.map(product => (
                   <div 
                     key={product.id} 
-                    onClick={() => {
-                      onProductClick(product.id);
-                      onClose();
-                    }}
+                    onClick={() => { onProductClick(String(product.id)); onClose(); }}
                     className="w-[140px] shrink-0 bg-brand-background rounded-xl shadow-sm overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col"
                   >
-                    <img src={product.imageUrl} alt={product.name} className="w-full h-[100px] object-cover" />
+                    <img src={product.image || ''} alt={product.name} className="w-full h-[100px] object-cover" />
                     <div className="p-3 flex-1 flex flex-col justify-between">
                       <h4 className="font-bold text-xs text-slate-800 line-clamp-2 mb-2">{product.name}</h4>
                       <div className="flex items-center justify-between mt-auto">
@@ -118,13 +113,10 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onProductCli
                   {searchResults.map(product => (
                     <div 
                       key={product.id}
-                      onClick={() => {
-                        onProductClick(product.id);
-                        onClose();
-                      }}
+                      onClick={() => { onProductClick(String(product.id)); onClose(); }}
                       className="bg-brand-background p-3 rounded-xl shadow-sm flex gap-4 cursor-pointer active:scale-[0.98] transition-transform items-center"
                     >
-                      <img src={product.imageUrl} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
+                      <img src={product.image || ''} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
                       <div className="flex-1">
                         <h4 className="font-bold text-slate-800 text-sm">{product.name}</h4>
                         <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{product.description}</p>

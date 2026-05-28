@@ -14,21 +14,16 @@ interface PosCartAreaProps {
   onRemoveItem: (id: string) => void;
   onUpdateQty: (id: string, delta: number) => void;
   onClearCart: () => void;
+  onCheckout: () => void;
+  isProcessing?: boolean;
 }
 
 export default function PosCartArea({
-  cart,
-  orderType,
-  customerName,
-  customerPhone,
-  subtotal,
-  tax,
-  total,
-  onUpdateCustomerName,
-  onUpdateCustomerPhone,
-  onRemoveItem,
-  onUpdateQty,
-  onClearCart
+  cart, orderType, customerName, customerPhone,
+  subtotal, tax, total,
+  onUpdateCustomerName, onUpdateCustomerPhone,
+  onRemoveItem, onUpdateQty, onClearCart,
+  onCheckout, isProcessing
 }: PosCartAreaProps) {
   return (
     <div className="w-full lg:w-[400px] bg-white flex flex-col h-full shrink-0 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] z-10 relative">
@@ -172,11 +167,12 @@ export default function PosCartArea({
           <span className="font-bold text-brand-primary text-xl">Rp. {total.toLocaleString('id-ID')}</span>
         </div>
         <button 
-          disabled={cart.length === 0}
+          onClick={onCheckout}
+          disabled={cart.length === 0 || isProcessing}
           className="w-full bg-brand-secondary hover:bg-brand-secondaryHover disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-md"
         >
           <ShoppingBag className="w-5 h-5" />
-          Bayar
+          {isProcessing ? "Memproses..." : "Bayar"}
         </button>
       </div>
     </div>

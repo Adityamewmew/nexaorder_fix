@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { X, Minus, Plus, ShoppingBasket } from 'lucide-react';
-import { MOCK_PRODUCTS } from '@/utils/mockData';
+import { X, Minus, Plus, ShoppingBasket, Loader2 } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { useDispatch } from 'react-redux';
 import { addToCustomerCart } from '@/features/customer/store/customerSlice';
 import { useToast } from '@/contexts/ToastContext';
+import api from '@/lib/api';
+
+interface Modifier { id: string; name: string; price: number; isDefault: boolean; }
+interface ModifierGroup { id: string; name: string; isRequired: boolean; minSelections: number; maxSelections: number; modifiers: Modifier[]; }
+interface Product {
+  id: string; name: string; price: number; stock: number;
+  description: string | null; image: string | null; status: string;
+  categoryId: string; modifierGroups?: ModifierGroup[];
+}
 
 interface MenuDetailModalProps {
   productId: string | null;
@@ -14,35 +22,31 @@ interface MenuDetailModalProps {
 const MenuDetailModal: React.FC<MenuDetailModalProps> = ({ productId, onClose }) => {
   const dispatch = useDispatch();
   const { showToast } = useToast();
-  
-  const product = MOCK_PRODUCTS.find(p => p.id === productId);
-  
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
-  // Simpan pilihan modifiers dalam bentuk ID (m-1, m-2, dsb)
   const [selectedModifiers, setSelectedModifiers] = useState<string[]>([]);
 
-  // Reset state saat produk berubah
   useEffect(() => {
-    setQuantity(1);
-    setNotes('');
-    
-    // Set default modifiers jika ada
-    if (product?.modifierGroups) {
-      const defaults: string[] = [];
-      product.modifierGroups.forEach(group => {
-        group.modifiers.forEach(mod => {
-          if (mod.isDefault) {
-            defaults.push(mod.id);
-          }
-        });
-      });
-      setSelectedModifiers(defaults);
-    } else {
-      setSelectedModifiers([]);
-    }
-  }, [product]);
+    if (!productId) { setProduct(null); return; }
+    setLoading(true);
+    setQuantity(1); setNotes(''); setSelectedModifiers([]);
+    api.get(`/products/${productId}`)
+      .then(res => {
+        const p = res.data;
+        setProduct({ ...p, id: String(p.id), categoryId: String(p.categoryId) });
+      })
+      .catch(() => showToast('Gagal memuat detail menu', 'error'))
+      .finally(() => setLoading(false));
+  }, [productId]);
 
+  if (!productId) return null;
+  if (loading) return (
+    <div className="fixed inset-0 bg-black/60 z-[250] flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-white animate-spin" />
+    </div>
+  );
   if (!product) return null;
 
   // Hitung total harga tambahan dari modifier
@@ -122,7 +126,7 @@ const MenuDetailModal: React.FC<MenuDetailModalProps> = ({ productId, onClose })
       id: product.id,
       name: product.name,
       price: product.price,
-      imageUrl: product.imageUrl,
+      imageUrl: product.image || '',
       categoryId: product.categoryId,
       qty: quantity,
       modifiers: modifiersToAdd,
@@ -159,7 +163,7 @@ const MenuDetailModal: React.FC<MenuDetailModalProps> = ({ productId, onClose })
           <div className="max-w-2xl mx-auto w-full">
             {/* Gambar Produk */}
             <div className="relative bg-white pb-6 rounded-b-3xl shadow-sm">
-              <img src={product.imageUrl} alt={product.name} className="w-full h-64 md:h-80 object-cover" />
+              <img src={product.image || ''} alt={product.name} className="w-full h-64 md:h-80 object-cover" />
               <button 
                 onClick={onClose}
                 className="absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition"

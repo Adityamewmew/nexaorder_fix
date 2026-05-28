@@ -3,15 +3,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { Product } from "@/types";
 import {
-  addToCart,
-  removeFromCart,
-  updateQuantity,
-  setOrderInfo,
-  clearCart
+  addToCart, removeFromCart, updateQuantity,
+  setOrderInfo, clearCart
 } from "./cartSlice";
 import PosMenuArea from "./components/PosMenuArea";
 import PosCartArea from "./components/PosCartArea";
 import api from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 
 interface ApiProduct {
   id: number;
@@ -41,12 +39,14 @@ function toProduct(p: ApiProduct): Product {
 
 export default function PointOfSale() {
   const dispatch = useDispatch();
+  const { showToast } = useToast();
 
   const [activeCategory, setActiveCategory] = useState<string>("Semua");
   const [searchQuery, setSearchQuery] = useState("");
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [apiCategories, setApiCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
 
   const cart = useSelector((state: RootState) => state.cart.items);
   const { orderType, customerName, customerPhone } = useSelector((state: RootState) => state.cart);
@@ -81,6 +81,45 @@ export default function PointOfSale() {
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
   const tax = subtotal * 0.1;
   const total = subtotal + tax;
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    if (!customerName.trim()) { showToast("Masukkan nama customer terlebih dahulu", "error"); return; }
+    setProcessing(true);
+    try {
+      // Kasir order tidak butuh tableId — pakai meja pertama yang aktif atau buat tanpa meja
+      // Untuk POS kasir, kita gunakan tableId=1 sebagai default (bisa dikembangkan)
+      const tables = await api.get("/tables");
+      const activeTable = tables.data.find((t: { status: string }) => t.status === "aktif");
+      if (!activeTable) { showToast("Tidak ada meja aktif. Tambah meja terlebih dahulu.", "error"); return; }
+
+      const orderRes = await api.post("/orders", {
+        tableId: activeTable.id,
+        customerName: customerName.trim(),
+        phone: customerPhone || null,
+        items: cart.map(item => ({
+          productId: parseInt(item.id.split("-")[0]),
+          quantity: item.qty,
+          note: item.notes || null,
+        })),
+      });
+
+      await api.post("/payments", {
+        orderId: orderRes.data.id,
+        method: "CASH",
+      });
+
+      await api.patch(`/orders/${orderRes.data.id}/status`, { status: "PROCESS" });
+
+      showToast(`Pesanan #${orderRes.data.id} berhasil dibuat!`, "success");
+      dispatch(clearCart());
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      showToast(error.response?.data?.error || "Gagal membuat pesanan", "error");
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -128,6 +167,8 @@ export default function PointOfSale() {
         onRemoveItem={(id) => dispatch(removeFromCart(id))}
         onUpdateQty={(id, delta) => dispatch(updateQuantity({ id, delta }))}
         onClearCart={() => dispatch(clearCart())}
+        onCheckout={handleCheckout}
+        isProcessing={processing}
       />
     </div>
   );

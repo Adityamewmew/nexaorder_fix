@@ -173,7 +173,7 @@ export default function StaffForm() {
                 onChange={(e) => setFormData({...formData, role: e.target.value})}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary focus:bg-white transition-colors appearance-none"
               >
-                <option value="KASIR">Kasir</option>
+                <option value="CASHIER">Kasir</option>
                 {/* Opsi role lain jika ada di masa depan */}
               </select>
             </div>
