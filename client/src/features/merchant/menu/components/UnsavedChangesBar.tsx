@@ -1,13 +1,14 @@
-import { AlertCircle, Save } from "lucide-react";
+import { AlertCircle, Save, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UnsavedChangesBarProps {
   hasUnsavedChanges: boolean;
   onRevert: () => void;
   onSave: () => void;
+  isSaving?: boolean;
 }
 
-export default function UnsavedChangesBar({ hasUnsavedChanges, onRevert, onSave }: UnsavedChangesBarProps) {
+export default function UnsavedChangesBar({ hasUnsavedChanges, onRevert, onSave, isSaving }: UnsavedChangesBarProps) {
   return (
     <div className={cn(
       "fixed bottom-0 left-0 right-0 md:left-64 bg-white border-t border-slate-200 p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-40 transition-transform duration-300 flex items-center justify-between",
@@ -23,18 +24,20 @@ export default function UnsavedChangesBar({ hasUnsavedChanges, onRevert, onSave 
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <button 
+        <button
           onClick={onRevert}
-          className="px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+          disabled={isSaving}
+          className="px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50"
         >
           Batalkan
         </button>
-        <button 
+        <button
           onClick={onSave}
-          className="px-6 py-2.5 bg-brand-primary hover:bg-brand-primaryHover text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+          disabled={isSaving}
+          className="px-6 py-2.5 bg-brand-primary hover:bg-brand-primaryHover text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50"
         >
-          <Save className="w-4 h-4" />
-          Simpan Perubahan
+          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
         </button>
       </div>
     </div>

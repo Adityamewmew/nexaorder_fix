@@ -1,40 +1,55 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ImagePlus, Eye, EyeOff, Info, Save } from "lucide-react";
+import { ChevronLeft, ImagePlus, Eye, EyeOff, Info, Save, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/contexts/ToastContext";
+import api from "@/lib/api";
 
 export default function StaffForm() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [formData, setFormData] = useState({
     username: "",
+    name: "",
     password: "",
     confirmPassword: "",
-    role: "KASIR",
+    role: "CASHIER",
     isActive: true
   });
-  
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = () => {
-    // Validasi
-    if (!formData.username.trim() || !formData.password || !formData.confirmPassword) {
-      showToast("Harap isi semua kolom wajib (Username & Password)!", "error");
-      return;
-    }
-    if (formData.username.trim().toLowerCase() === "andi@nexa.com") {
-      showToast("Username sudah digunakan. Harap gunakan yang lain.", "error");
+  const handleSave = async () => {
+    if (!formData.username.trim() || !formData.name.trim() || !formData.password) {
+      showToast("Harap isi semua kolom wajib!", "error");
       return;
     }
     if (formData.password !== formData.confirmPassword) {
       showToast("Password dan Konfirmasi Password tidak cocok!", "error");
       return;
     }
-    
-    showToast("Akun kasir berhasil ditambahkan!", "success");
-    navigate("/merchant/staff");
+    if (formData.password.length < 6) {
+      showToast("Password minimal 6 karakter!", "error");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.post("/auth/register", {
+        username: formData.username.trim(),
+        name: formData.name.trim(),
+        password: formData.password,
+        role: formData.role,
+      });
+      showToast("Akun kasir berhasil ditambahkan!", "success");
+      navigate("/merchant/staff");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      showToast(error.response?.data?.error || "Gagal membuat akun kasir", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,6 +77,17 @@ export default function StaffForm() {
           
           {/* Kolom Kiri: Input Kredensial */}
           <div className="space-y-6">
+            <div>
+              <label className="text-sm font-bold text-slate-800 mb-2 block">Nama Lengkap</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                placeholder="Masukkan nama lengkap kasir"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary focus:bg-white transition-colors"
+              />
+            </div>
+
             <div>
               <label className="text-sm font-bold text-slate-800 mb-2 block">Username</label>
               <input
@@ -183,12 +209,13 @@ export default function StaffForm() {
           >
             Batal
           </button>
-          <button 
+          <button
             onClick={handleSave}
-            className="px-8 py-2.5 bg-brand-secondary hover:bg-brand-secondaryHover text-white font-bold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+            disabled={loading}
+            className="px-8 py-2.5 bg-brand-secondary hover:bg-brand-secondaryHover disabled:opacity-50 text-white font-bold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
           >
-            <Save className="w-4 h-4" />
-            Simpan Akun
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {loading ? "Menyimpan..." : "Simpan Akun"}
           </button>
         </div>
 

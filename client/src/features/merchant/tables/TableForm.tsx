@@ -1,61 +1,45 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, LayoutGrid, Info, QrCode, Download, Save, X } from "lucide-react";
+import { ChevronLeft, LayoutGrid, Info, QrCode, Download, Save, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/contexts/ToastContext";
 import { QRCodeSVG } from "qrcode.react";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
+import api from "@/lib/api";
 
 export default function TableForm() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  
-  // Ambil tenantId dari auth state (opsional jika dibutuhkan untuk simulasikan tableId)
-  const { user } = useSelector((state: RootState) => state.auth);
-  const tenantId = user?.tenantId || "tenant-001";
 
-  const [formData, setFormData] = useState({
-    name: "",
-    isActive: true
-  });
-  
-  // Flag untuk menunjukkan apakah QR sudah digenerate (artinya meja siap disimpan)
+  const [formData, setFormData] = useState({ name: "", isActive: true });
   const [isGenerated, setIsGenerated] = useState(false);
-  // Simpan id simulasi setelah di-generate
-  const [generatedTableId, setGeneratedTableId] = useState("");
+  const [savedTableId, setSavedTableId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleGenerate = () => {
+  const handleSave = async () => {
     if (!formData.name.trim()) {
       showToast("Harap isi nama/nomor meja terlebih dahulu!", "error");
       return;
     }
-    // Simulasi mengecek apakah nama meja sudah ada (Bisa pakai Regex juga jika diperlukan format tertentu)
-    if (formData.name.trim().toLowerCase() === "meja 01") {
-      showToast("Nama/Nomor meja ini sudah digunakan!", "error");
-      return;
+    setLoading(true);
+    try {
+      const res = await api.post("/tables", {
+        number: formData.name.trim(),
+        status: formData.isActive ? "aktif" : "nonaktif",
+      });
+      setSavedTableId(res.data.id);
+      setIsGenerated(true);
+      showToast(`Meja '${formData.name}' berhasil ditambahkan!`, "success");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      showToast(error.response?.data?.error || "Gagal menambah meja", "error");
+    } finally {
+      setLoading(false);
     }
-    
-    // Buat simulasi ID (misal dari "Stadion Jatidiri" -> "tbl-stadion-jatidiri")
-    const tempId = `tbl-${formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
-    setGeneratedTableId(tempId);
-    setIsGenerated(true);
-    showToast("QR Code berhasil di-generate!", "success");
   };
 
-  const handleSave = () => {
-    if (!isGenerated) {
-      showToast("Silakan klik 'Generate QR' terlebih dahulu sebelum menyimpan!", "error");
-      return;
-    }
-    showToast(`Meja '${formData.name}' berhasil ditambahkan!`, "success");
-    navigate("/merchant/tables");
-  };
-
-  // Fungsi URL QR
   const generateCustomerUrl = () => {
-    if (!generatedTableId) return "";
-    return `${window.location.origin}/m/${tenantId}/${generatedTableId}`;
+    if (!savedTableId) return "";
+    return `${window.location.origin}/m/merchant/${savedTableId}`;
   };
 
   return (
@@ -166,21 +150,22 @@ export default function TableForm() {
             </p>
           </div>
 
-          <button 
-            onClick={handleGenerate}
-            className="w-full py-3.5 bg-brand-secondary hover:bg-brand-secondaryHover text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm mb-4"
+          <button
+            onClick={handleSave}
+            disabled={loading || isGenerated}
+            className="w-full py-3.5 bg-brand-secondary hover:bg-brand-secondaryHover disabled:opacity-50 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm mb-4"
           >
-            <QrCode className="w-5 h-5" />
-            Generate QR
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <QrCode className="w-5 h-5" />}
+            {isGenerated ? "Meja Tersimpan" : loading ? "Menyimpan..." : "Simpan & Generate QR"}
           </button>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <button 
-              onClick={handleSave}
+            <button
+              onClick={() => navigate("/merchant/tables")}
               className="py-3 bg-white border border-brand-primary text-brand-primary hover:bg-brand-primary/5 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
-              Simpan Meja
+              Selesai
             </button>
             <button 
               disabled={!isGenerated}

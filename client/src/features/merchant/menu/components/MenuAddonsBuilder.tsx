@@ -1,4 +1,4 @@
-import { Plus, Trash2, GripVertical, PlusCircle, XCircle, ChevronLeft, Save } from "lucide-react";
+import { Plus, Trash2, GripVertical, PlusCircle, XCircle, ChevronLeft, Save, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MenuAddonsBuilderProps {
@@ -14,6 +14,7 @@ interface MenuAddonsBuilderProps {
   handleUpdateModifier: (groupIndex: number, modifierIndex: number, field: string, value: any) => void;
   onBack: () => void;
   onSave: () => void;
+  isSaving?: boolean;
 }
 
 export default function MenuAddonsBuilder({
@@ -25,7 +26,8 @@ export default function MenuAddonsBuilder({
   handleRemoveModifier,
   handleUpdateModifier,
   onBack,
-  onSave
+  onSave,
+  isSaving
 }: MenuAddonsBuilderProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -213,10 +215,11 @@ export default function MenuAddonsBuilder({
         </button>
         <button 
           onClick={onSave}
-          className="px-8 py-3 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold rounded-xl transition-colors flex items-center gap-2 shadow-md text-lg"
+          disabled={isSaving}
+          className="px-8 py-3 bg-brand-primary hover:bg-brand-primaryHover disabled:opacity-50 text-white font-bold rounded-xl transition-colors flex items-center gap-2 shadow-md text-lg"
         >
-          <Save className="w-5 h-5" />
-          Simpan Menu
+          {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+          {isSaving ? "Menyimpan..." : "Simpan Menu"}
         </button>
       </div>
 

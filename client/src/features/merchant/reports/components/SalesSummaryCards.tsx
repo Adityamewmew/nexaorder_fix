@@ -1,6 +1,12 @@
 import { Banknote, ShoppingCart, Package } from "lucide-react";
 
-export default function SalesSummaryCards() {
+interface SalesSummaryCardsProps {
+  totalPendapatan?: number;
+  totalTransaksi?: number;
+  totalItemTerjual?: number;
+}
+
+export default function SalesSummaryCards({ totalPendapatan = 0, totalTransaksi = 0, totalItemTerjual = 0 }: SalesSummaryCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-5">
@@ -9,7 +15,7 @@ export default function SalesSummaryCards() {
         </div>
         <div>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Pendapatan</p>
-          <h3 className="text-2xl font-black text-slate-800">Rp. 2.650.000</h3>
+          <h3 className="text-2xl font-black text-slate-800">Rp. {totalPendapatan.toLocaleString("id-ID")}</h3>
         </div>
       </div>
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-5">
@@ -18,7 +24,7 @@ export default function SalesSummaryCards() {
         </div>
         <div>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Transaksi</p>
-          <h3 className="text-2xl font-black text-slate-800">265</h3>
+          <h3 className="text-2xl font-black text-slate-800">{totalTransaksi}</h3>
         </div>
       </div>
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-5">
@@ -26,8 +32,8 @@ export default function SalesSummaryCards() {
           <Package className="w-7 h-7" />
         </div>
         <div>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Makanan Terjual</p>
-          <h3 className="text-2xl font-black text-slate-800">445</h3>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Item Terjual</p>
+          <h3 className="text-2xl font-black text-slate-800">{totalItemTerjual}</h3>
         </div>
       </div>
     </div>

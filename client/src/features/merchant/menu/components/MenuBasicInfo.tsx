@@ -1,17 +1,17 @@
 import { ImagePlus, AlertCircle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MOCK_CATEGORIES } from "@/utils/mockData";
 import { useNavigate } from "react-router-dom";
 
 interface MenuBasicInfoProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   formData: any;
+  categories: { id: string; name: string }[];
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   handleToggleAvailability: () => void;
   onNext: () => void;
 }
 
-export default function MenuBasicInfo({ formData, handleInputChange, handleToggleAvailability, onNext }: MenuBasicInfoProps) {
+export default function MenuBasicInfo({ formData, categories, handleInputChange, handleToggleAvailability, onNext }: MenuBasicInfoProps) {
   const navigate = useNavigate();
 
   return (
@@ -55,7 +55,7 @@ export default function MenuBasicInfo({ formData, handleInputChange, handleToggl
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary focus:bg-white transition-colors appearance-none"
               >
-                {MOCK_CATEGORIES.map(cat => (
+                {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
