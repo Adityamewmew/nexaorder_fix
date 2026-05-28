@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String?  @unique
+  password  String
+  name      String
+  role      String   @default("CASHIER")
+  status    String   @default("aktif")
+  photo     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  products Product[]
+}
+
+model Product {
+  id          Int         @id @default(autoincrement())
+  name        String
+  price       Int
+  stock       Int         @default(0)
+  description String?
+  image       String?
+  status      String      @default("tersedia")
+  categoryId  Int
+  category    Category    @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model TableMeja {
+  id     Int     @id @default(autoincrement())
+  number String  @unique
+  status String  @default("aktif")
+  qrCode String?
+  orders Order[]
+}
+
+model Order {
+  id           Int         @id @default(autoincrement())
+  tableId      Int
+  table        TableMeja   @relation(fields: [tableId], references: [id])
+  customerName String?
+  phone        String?
+  total        Int         @default(0)
+  status       String      @default("PENDING")
+  items        OrderItem[]
+  payment      Payment?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  note      String?
+  subtotal  Int
+  toppings  String?
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  method    String
+  amount    Int
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,27 @@
+# IDE & Editor
+.kiro/
+.vscode/
+
+# Dependencies
+node_modules/
+
+# Environment variables (berisi credentials/secrets)
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads (file yang diupload user, bukan bagian kode)
+server/uploads/*
+!server/uploads/.gitkeep
