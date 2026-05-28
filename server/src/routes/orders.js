@@ -7,6 +7,126 @@ const router = express.Router()
 // =============================================
 // BAGIAN RAVI — customer endpoints
 // =============================================
+// POST /api/orders — customer buat pesanan (no auth)
+router.post('/', async (req, res) => {
+  try {
+    const { tableId, customerName, phone, items } = req.body
+
+    // VALIDASI
+    if (!tableId || !items || items.length === 0) {
+      return res.status(400).json({
+        error: 'tableId dan items wajib'
+      })
+    }
+
+    let total = 0
+
+    const orderItemsData = []
+
+    // LOOP ITEMS
+    for (const item of items) {
+
+      // CARI PRODUCT
+      const product = await prisma.product.findUnique({
+        where: {
+          id: item.productId
+        }
+      })
+
+      // CEK PRODUCT ADA ATAU TIDAK
+      if (!product) {
+        return res.status(400).json({
+          error: `Produk ID ${item.productId} tidak ditemukan`
+        })
+      }
+
+      // HITUNG SUBTOTAL
+      const subtotal = product.price * item.quantity
+
+      total += subtotal
+
+      orderItemsData.push({
+        productId: item.productId,
+        quantity: item.quantity,
+        note: item.note,
+        toppings: item.toppings,
+        subtotal
+      })
+    }
+
+    // CREATE ORDER
+    const order = await prisma.order.create({
+      data: {
+        tableId,
+        customerName,
+        phone,
+        total,
+        items: {
+          create: orderItemsData
+        }
+      },
+
+      include: {
+        items: {
+          include: {
+            product: true
+          }
+        }
+      }
+    })
+
+    res.status(201).json(order)
+
+  } catch (error) {
+    console.log(error)
+
+    res.status(500).json({
+      error: 'Internal server error'
+    })
+  }
+})
+
+// GET /api/orders/:id — customer cek status pesanan (no auth)
+router.get('/:id', async (req, res) => {
+  try {
+
+    const orderId = parseInt(req.params.id)
+
+    const order = await prisma.order.findUnique({
+      where: {
+        id: orderId
+      },
+
+      include: {
+        table: true,
+
+        items: {
+          include: {
+            product: true
+          }
+        },
+
+        payment: true
+      }
+    })
+
+    if (!order) {
+      return res.status(404).json({
+        error: 'Pesanan tidak ditemukan'
+      })
+    }
+
+    res.json(order)
+
+  } catch (error) {
+    console.log(error)
+
+    res.status(500).json({
+      error: 'Internal server error'
+    })
+  }
+})
+
 
 // POST /api/orders — customer buat pesanan (no auth)
 router.post('/', async (req, res) => {

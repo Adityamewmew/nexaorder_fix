@@ -23,6 +23,7 @@ const userRoutes = require('./routes/users')
 const dashboardRoutes = require('./routes/dashboard')
 const uploadRoutes = require('./routes/upload')
 
+
 const app = express()
 
 app.use(cors())
@@ -42,6 +43,11 @@ app.use('/api/payments', paymentRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/upload', uploadRoutes)
+
+
+
+
+
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }))
