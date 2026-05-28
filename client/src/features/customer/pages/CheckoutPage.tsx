@@ -5,23 +5,22 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, User, CheckCircle2, Wallet, QrCode, ShoppingBag } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { setCustomerProfile, clearCustomerCart, setCustomerOrderId } from '@/features/customer/store/customerSlice';
-import { addOrder } from '@/features/merchant/orders/orderSlice';
-import { OrderItem } from '@/types';
+import api from '@/lib/api';
 
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { tenantId, tableId } = useParams();
-  
+
   const { items, customerName, customerPhone } = useSelector((state: RootState) => state.customer);
-  
+
   const [name, setName] = useState(customerName || '');
   const [phone, setPhone] = useState(customerPhone || '');
   const [paymentMethod, setPaymentMethod] = useState<'QRIS' | 'CASH'>('QRIS');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  // Jika tidak ada item, lempar kembali ke menu
   if (items.length === 0 && !isSuccess) {
     navigate(`/m/${tenantId}/${tableId}`);
     return null;
@@ -32,66 +31,50 @@ const CheckoutPage: React.FC = () => {
     return sum + ((item.price + modsTotal) * item.qty);
   }, 0);
 
-  const handleBack = () => {
-    navigate(`/m/${tenantId}/${tableId}/cart`);
-  };
+  const handleBack = () => navigate(`/m/${tenantId}/${tableId}/cart`);
 
-  const handlePayment = () => {
-    if (!name.trim()) return; // Validasi nama
-
+  const handlePayment = async () => {
+    if (!name.trim()) return;
     setIsProcessing(true);
+    setErrorMsg('');
 
-    // Simulasi proses pembayaran/order
-    setTimeout(() => {
-      setIsProcessing(false);
-      setIsSuccess(true);
-      
-      // Simpan profil sesaat sebelum pindah halaman agar efisien
+    try {
+      // 1. Buat pesanan
+      const orderRes = await api.post('/orders', {
+        tableId: parseInt(tableId || '1'),
+        customerName: name,
+        phone: phone || null,
+        items: items.map(item => ({
+          productId: parseInt(item.id.split('-')[0]),
+          quantity: item.qty,
+          note: item.notes || null,
+        })),
+      });
+
+      const orderId = String(orderRes.data.id);
+
+      // 2. Buat pembayaran
+      await api.post('/payments', {
+        orderId: parseInt(orderId),
+        method: paymentMethod,
+      });
+
+      // 3. Simpan state
       dispatch(setCustomerProfile({ name, phone }));
-      
-      // Generate dummy Order ID
-      const orderId = `M${Math.floor(Math.random() * 1000).toString().padStart(4, '0')}`;
       dispatch(setCustomerOrderId(orderId));
 
-      // Bikin format items yang cocok dengan merchant (OrderItem)
-      const orderItems: OrderItem[] = items.map((item, index) => ({
-        id: `oi-${Date.now()}-${index}`,
-        orderId: orderId,
-        productId: item.id.split('-')[0], // Hapus unique suffix jika ada
-        productName: item.name,
-        categoryId: item.categoryId || "cat-1", // Fallback
-        quantity: item.qty,
-        priceAtOrder: item.price,
-        notes: item.notes,
-        modifiers: item.modifiers.map(m => ({
-          groupId: m.groupId,
-          groupName: m.groupName,
-          modifierId: m.modifierId,
-          modifierName: m.modifierName,
-          price: m.price
-        }))
-      }));
+      setIsSuccess(true);
 
-      // Tembak ke Mock Merchant Orders
-      dispatch(addOrder({
-        id: orderId,
-        tenantId: tenantId || "tenant-001",
-        tableId: tableId || "1",
-        customerName: `Meja ${tableId?.replace(/\D/g, '') || 'X'} (${name})`,
-        status: "PENDING",
-        paymentMethod: paymentMethod === "CASH" ? "UNPAID" : "QRIS",
-        totalAmount: subtotal,
-        createdAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-        items: orderItems
-      }));
-      
-      // Simulasi pindah ke halaman status setelah 1.5 detik
+      // 4. Pindah ke halaman status setelah 1.5 detik
       setTimeout(() => {
-        dispatch(clearCustomerCart()); // Kosongkan keranjang setelah order dibuat
+        dispatch(clearCustomerCart());
         navigate(`/m/${tenantId}/${tableId}/status/${orderId}`, { replace: true });
       }, 1500);
 
-    }, 1500);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.error || 'Gagal membuat pesanan. Coba lagi.');
+      setIsProcessing(false);
+    }
   };
 
   if (isSuccess) {
@@ -100,7 +83,7 @@ const CheckoutPage: React.FC = () => {
         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 animate-bounce">
           <CheckCircle2 className="w-16 h-16 text-brand-success" />
         </div>
-        <h1 className="text-3xl font-black mb-2">Payment Successful!</h1>
+        <h1 className="text-3xl font-black mb-2">Pesanan Berhasil!</h1>
         <p className="text-white/90 font-medium">Pesananmu sedang diteruskan ke dapur...</p>
       </div>
     );
@@ -116,29 +99,32 @@ const CheckoutPage: React.FC = () => {
         <h1 className="text-xl font-bold text-slate-800">Pembayaran</h1>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 overflow-y-auto pb-32">
         <div className="w-full max-w-2xl mx-auto p-4 md:p-6 space-y-6">
-          
+
+          {errorMsg && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-4">
+              ⚠️ {errorMsg}
+            </div>
+          )}
+
           {/* Identitas Form */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
             <h2 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
               <User className="w-5 h-5 text-brand-primary" />
               Informasi Pemesan
             </h2>
-            
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">Nama Lengkap <span className="text-red-500">*</span></label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Masukkan nama Anda"
                   className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-brand-primary focus:bg-white transition-colors"
                 />
               </div>
-              
               <div>
                 <label className="text-xs font-bold text-slate-600 mb-1.5 ml-1 flex justify-between">
                   <span>Nomor WhatsApp</span>
@@ -146,19 +132,14 @@ const CheckoutPage: React.FC = () => {
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">+62</span>
-                  <input 
-                    type="tel" 
+                  <input
+                    type="tel"
                     value={phone}
-                    onChange={(e) => {
-                      // Validasi: Hanya izinkan angka (numeric)
-                      const val = e.target.value.replace(/\D/g, '');
-                      setPhone(val);
-                    }}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                     placeholder="8123456..."
                     className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-3 pr-3 pl-11 text-sm focus:outline-none focus:border-brand-primary focus:bg-white transition-colors"
                   />
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Digunakan jika kasir perlu menghubungi Anda terkait pesanan.</p>
               </div>
             </div>
           </div>
@@ -169,17 +150,12 @@ const CheckoutPage: React.FC = () => {
               <Wallet className="w-5 h-5 text-brand-primary" />
               Metode Pembayaran
             </h2>
-            
             <div className="space-y-3">
-              <label 
+              <label
                 onClick={() => setPaymentMethod('QRIS')}
-                className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  paymentMethod === 'QRIS' ? 'border-brand-primary bg-brand-primary/5' : 'border-slate-100 bg-slate-50 hover:border-slate-200'
-                }`}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'QRIS' ? 'border-brand-primary bg-brand-primary/5' : 'border-slate-100 bg-slate-50 hover:border-slate-200'}`}
               >
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  paymentMethod === 'QRIS' ? 'border-brand-primary bg-brand-primary' : 'border-slate-300 bg-white'
-                }`}>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'QRIS' ? 'border-brand-primary bg-brand-primary' : 'border-slate-300 bg-white'}`}>
                   {paymentMethod === 'QRIS' && <div className="w-2 h-2 bg-white rounded-full" />}
                 </div>
                 <div className="flex-1">
@@ -189,15 +165,11 @@ const CheckoutPage: React.FC = () => {
                 <QrCode className={`w-6 h-6 ${paymentMethod === 'QRIS' ? 'text-brand-primary' : 'text-slate-400'}`} />
               </label>
 
-              <label 
+              <label
                 onClick={() => setPaymentMethod('CASH')}
-                className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  paymentMethod === 'CASH' ? 'border-brand-primary bg-brand-primary/5' : 'border-slate-100 bg-slate-50 hover:border-slate-200'
-                }`}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'CASH' ? 'border-brand-primary bg-brand-primary/5' : 'border-slate-100 bg-slate-50 hover:border-slate-200'}`}
               >
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  paymentMethod === 'CASH' ? 'border-brand-primary bg-brand-primary' : 'border-slate-300 bg-white'
-                }`}>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'CASH' ? 'border-brand-primary bg-brand-primary' : 'border-slate-300 bg-white'}`}>
                   {paymentMethod === 'CASH' && <div className="w-2 h-2 bg-white rounded-full" />}
                 </div>
                 <div className="flex-1">
@@ -219,14 +191,10 @@ const CheckoutPage: React.FC = () => {
             <p className="text-xs text-slate-500 font-medium mb-0.5">Total Tagihan</p>
             <p className="text-xl font-black text-brand-primary leading-none">{formatRupiah(subtotal)}</p>
           </div>
-          <button 
+          <button
             onClick={handlePayment}
             disabled={!name.trim() || isProcessing}
-            className={`font-bold py-3.5 px-8 rounded-xl transition shadow-md flex items-center justify-center gap-2 ${
-              !name.trim() || isProcessing
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-brand-success text-white hover:bg-green-600 active:scale-95'
-            }`}
+            className={`font-bold py-3.5 px-8 rounded-xl transition shadow-md flex items-center justify-center gap-2 ${!name.trim() || isProcessing ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-brand-success text-white hover:bg-green-600 active:scale-95'}`}
           >
             {isProcessing ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -239,7 +207,6 @@ const CheckoutPage: React.FC = () => {
           </button>
         </div>
       </div>
-
     </div>
   );
 };
