@@ -27,15 +27,13 @@ const loadState = (): Partial<RootState> | undefined => {
   }
 };
 
-// Helper untuk save state ke localStorage dengan memilih state yang penting saja
+// Helper untuk save state ke localStorage — hanya auth dan customer
+// orders TIDAK disimpan karena selalu fresh dari API
 const saveState = (state: RootState) => {
   try {
-    // Hanya simpan state auth, customer, dan orders untuk menghemat localStorage
-    // State seperti cart kasir yang terlalu besar bisa diabaikan jika tidak diperlukan persist
     const stateToSave = {
       auth: state.auth,
       customer: state.customer,
-      orders: state.orders,
     };
     const serializedState = JSON.stringify(stateToSave);
     localStorage.setItem('nexa_app_state', serializedState);
@@ -44,8 +42,17 @@ const saveState = (state: RootState) => {
   }
 };
 
-// Ambil state yang tersimpan (jika ada)
-const persistedState = loadState();
+// Ambil state yang tersimpan (jika ada) — strip orders jika ada dari versi lama
+const persistedState = (() => {
+  const state = loadState();
+  if (state && 'orders' in state) {
+    // Hapus orders dari persisted state (versi lama menyimpannya)
+    const { orders: _orders, ...rest } = state as RootState & { orders?: unknown };
+    void _orders;
+    return rest as Partial<RootState>;
+  }
+  return state;
+})();
 
 export const store = configureStore({
   reducer: rootReducer,
