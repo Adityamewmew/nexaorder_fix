@@ -4,6 +4,6 @@
   "outputDirectory": "client/dist",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/((?!assets|.*\\..*$).*)", "destination": "/index.html" }
+    { "source": "/:path*", "destination": "/index.html" }
   ]
 }
