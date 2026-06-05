@@ -1,4 +1,7 @@
 {
+  "buildCommand": "npm run build --prefix client",
+  "installCommand": "npm install --prefix client",
+  "outputDirectory": "client/dist",
   "cleanUrls": true,
   "routes": [
     { "handle": "filesystem" },
