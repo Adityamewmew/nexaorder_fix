@@ -4,7 +4,8 @@ import {
   X,
   Minus,
   Plus,
-  ShoppingBasket
+  ShoppingBasket,
+  CheckCircle2
 } from 'lucide-react';
 
 import { formatRupiah } from '@/lib/utils';
@@ -31,6 +32,7 @@ const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
 
   const { showToast } = useToast();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [product, setProduct] = useState<any>(null);
 
   const [quantity, setQuantity] = useState(1);
@@ -47,8 +49,24 @@ const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
       try {
 
         const res = await api.get(`/products/${productId}`);
+        const p = res.data;
+        const transformedProduct = {
+          ...p,
+          modifierGroups: p.modifierGroups ? p.modifierGroups.map((g: any) => ({
+            id: String(g.id),
+            groupName: g.name,
+            isRequired: g.isRequired,
+            minSelections: g.minSelections,
+            maxSelections: g.maxSelections,
+            modifiers: g.modifiers.map((m: any) => ({
+              id: String(m.id),
+              modifierName: m.name,
+              price: m.price
+            }))
+          })) : []
+        };
 
-        setProduct(res.data);
+        setProduct(transformedProduct);
 
       } catch (err) {
 
@@ -60,21 +78,40 @@ const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
 
   }, [productId]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedModifiers, setSelectedModifiers] = useState<any[]>([]);
+
   // RESET
   useEffect(() => {
 
     setQuantity(1);
 
     setNotes('');
+    
+    setSelectedModifiers([]);
 
   }, [product]);
 
   if (!product) return null;
 
-  const totalPrice = product.price * quantity;
+  const modifiersPrice = selectedModifiers.reduce((sum, mod) => sum + (mod.price || 0), 0);
+  const totalPrice = (product.price + modifiersPrice) * quantity;
 
   // ADD TO CART
   const handleAddToCart = () => {
+
+    // Validasi required modifiers
+    if (product.modifierGroups && product.modifierGroups.length > 0) {
+      for (const group of product.modifierGroups) {
+        if (group.isRequired) {
+          const selectedInGroup = selectedModifiers.filter(m => m.groupId === group.id);
+          if (selectedInGroup.length < group.minSelections) {
+            showToast(`Pilih minimal ${group.minSelections} opsi untuk ${group.groupName}`, "error");
+            return;
+          }
+        }
+      }
+    }
 
     dispatch(addToCustomerCart({
 
@@ -90,7 +127,7 @@ const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
 
       qty: quantity,
 
-      modifiers: [],
+      modifiers: selectedModifiers.map(m => ({ id: m.id, name: m.name, price: m.price })),
 
       notes: notes.trim()
     }));
@@ -144,7 +181,7 @@ const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
             <div className="relative bg-white pb-6 rounded-b-3xl shadow-sm">
 
               <img
-                src={product.image}
+                src={product.image?.startsWith('http') ? product.image : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + product.image : `http://localhost:5000${product.image}`)}
                 alt={product.name}
                 className="w-full h-64 md:h-80 object-cover"
               />
@@ -180,6 +217,77 @@ const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
 
               </div>
             </div>
+
+            {/* MODIFIERS */}
+            {product.modifierGroups && product.modifierGroups.length > 0 && (
+              <div className="mt-4 bg-white px-5 py-4 shadow-sm rounded-3xl md:mx-4 space-y-6">
+                {product.modifierGroups.map((group: any) => (
+                  <div key={group.id} className="border-b border-slate-100 pb-5 last:border-0 last:pb-0">
+                    <div className="flex justify-between items-center mb-3">
+                      <div>
+                        <h3 className="font-bold text-slate-800">{group.groupName}</h3>
+                        <p className="text-xs text-slate-500">
+                          {group.isRequired ? `Pilih minimal ${group.minSelections}` : 'Opsional'}
+                          {group.maxSelections > 1 ? ` (Maksimal ${group.maxSelections})` : ''}
+                        </p>
+                      </div>
+                      {group.isRequired && (
+                        <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-bold">
+                          Wajib
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-3 mt-4">
+                      {group.modifiers.map((mod: any) => {
+                        const isSelected = selectedModifiers.some(m => m.id === mod.id);
+                        const isRadio = group.maxSelections === 1 && group.minSelections === 1;
+                        
+                        return (
+                          <label key={mod.id} className="flex items-center justify-between cursor-pointer group">
+                            <div className="flex items-center gap-3">
+                              <div className={`flex items-center justify-center border transition-colors ${
+                                isRadio 
+                                  ? `w-5 h-5 rounded-full ${isSelected ? 'border-brand-primary border-4' : 'border-slate-300 group-hover:border-brand-primary/50'}`
+                                  : `w-5 h-5 rounded ${isSelected ? 'bg-brand-primary border-brand-primary text-white' : 'border-slate-300 group-hover:border-brand-primary/50 bg-transparent'}`
+                              }`}>
+                                {!isRadio && isSelected && <CheckCircle2 className="w-3 h-3" />}
+                              </div>
+                              <span className="text-sm font-medium text-slate-700">{mod.modifierName}</span>
+                            </div>
+                            {mod.price > 0 && (
+                              <span className="text-sm font-semibold text-slate-600">+ {formatRupiah(mod.price)}</span>
+                            )}
+                            <input 
+                              type={isRadio ? "radio" : "checkbox"} 
+                              className="hidden"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (isRadio) {
+                                  // Hapus semua pilihan di grup ini, lalu tambah yang baru
+                                  const filtered = selectedModifiers.filter(m => m.groupId !== group.id);
+                                  setSelectedModifiers([...filtered, { ...mod, name: mod.modifierName, groupId: group.id }]);
+                                } else {
+                                  if (e.target.checked) {
+                                    // Cek max selections
+                                    const selectedInGroup = selectedModifiers.filter(m => m.groupId === group.id).length;
+                                    if (selectedInGroup < group.maxSelections) {
+                                      setSelectedModifiers([...selectedModifiers, { ...mod, name: mod.modifierName, groupId: group.id }]);
+                                    }
+                                  } else {
+                                    setSelectedModifiers(selectedModifiers.filter(m => m.id !== mod.id));
+                                  }
+                                }
+                              }}
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* NOTES */}
             <div className="mt-4 bg-white p-5 shadow-sm mb-4 rounded-3xl md:mx-4">

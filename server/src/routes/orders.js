@@ -4,136 +4,21 @@ const { authMiddleware } = require('../middleware/auth')
 
 const router = express.Router()
 
+// Hapus duplikasi endpoint POST dan GET di atas yang ditulis 2 kali oleh backend dev
 // =============================================
 // BAGIAN RAVI — customer endpoints
 // =============================================
-// POST /api/orders — customer buat pesanan (no auth)
-router.post('/', async (req, res) => {
-  try {
-    const { tableId, customerName, phone, items } = req.body
-
-    // VALIDASI
-    if (!tableId || !items || items.length === 0) {
-      return res.status(400).json({
-        error: 'tableId dan items wajib'
-      })
-    }
-
-    let total = 0
-
-    const orderItemsData = []
-
-    // LOOP ITEMS
-    for (const item of items) {
-
-      // CARI PRODUCT
-      const product = await prisma.product.findUnique({
-        where: {
-          id: item.productId
-        }
-      })
-
-      // CEK PRODUCT ADA ATAU TIDAK
-      if (!product) {
-        return res.status(400).json({
-          error: `Produk ID ${item.productId} tidak ditemukan`
-        })
-      }
-
-      // HITUNG SUBTOTAL
-      const subtotal = product.price * item.quantity
-
-      total += subtotal
-
-      orderItemsData.push({
-        productId: item.productId,
-        quantity: item.quantity,
-        note: item.note,
-        toppings: item.toppings,
-        subtotal
-      })
-    }
-
-    // CREATE ORDER
-    const order = await prisma.order.create({
-      data: {
-        tableId,
-        customerName,
-        phone,
-        total,
-        items: {
-          create: orderItemsData
-        }
-      },
-
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
-      }
-    })
-
-    res.status(201).json(order)
-
-  } catch (error) {
-    console.log(error)
-
-    res.status(500).json({
-      error: 'Internal server error'
-    })
-  }
-})
-
-// GET /api/orders/:id — customer cek status pesanan (no auth)
-router.get('/:id', async (req, res) => {
-  try {
-
-    const orderId = parseInt(req.params.id)
-
-    const order = await prisma.order.findUnique({
-      where: {
-        id: orderId
-      },
-
-      include: {
-        table: true,
-
-        items: {
-          include: {
-            product: true
-          }
-        },
-
-        payment: true
-      }
-    })
-
-    if (!order) {
-      return res.status(404).json({
-        error: 'Pesanan tidak ditemukan'
-      })
-    }
-
-    res.json(order)
-
-  } catch (error) {
-    console.log(error)
-
-    res.status(500).json({
-      error: 'Internal server error'
-    })
-  }
-})
-
-
-// POST /api/orders — customer buat pesanan (no auth)
 router.post('/', async (req, res) => {
   try {
     const { tableId, items, customerName, phone } = req.body
     if (!tableId || !items || items.length === 0) {
       return res.status(400).json({ error: 'tableId dan items wajib' })
+    }
+
+    // Pastikan tableId valid
+    const table = await prisma.tableMeja.findUnique({ where: { id: parseInt(tableId) } })
+    if (!table) {
+      return res.status(400).json({ error: 'Meja tidak ditemukan' })
     }
 
     let total = 0
@@ -142,8 +27,22 @@ router.post('/', async (req, res) => {
     for (const item of items) {
       const product = await prisma.product.findUnique({ where: { id: item.productId } })
       if (!product) return res.status(400).json({ error: `Produk ID ${item.productId} tidak ditemukan` })
-      const subtotal = product.price * item.quantity
+      if (product.stock < item.quantity) return res.status(400).json({ error: `Stok produk ${product.name} tidak mencukupi (sisa ${product.stock})` })
+      
+      // Calculate toppings price
+      let toppingsTotal = 0;
+      if (item.toppings) {
+        try {
+          const toppingsArr = JSON.parse(item.toppings);
+          toppingsTotal = toppingsArr.reduce((sum, top) => sum + (top.price || 0), 0);
+        } catch (e) {
+          console.error("Failed to parse toppings", e);
+        }
+      }
+
+      const subtotal = (product.price + toppingsTotal) * item.quantity
       total += subtotal
+      
       orderItems.push({
         productId: item.productId,
         quantity: item.quantity,
@@ -163,6 +62,24 @@ router.post('/', async (req, res) => {
       },
       include: { items: { include: { product: true } }, table: true }
     })
+
+    // Update product stocks
+    for (const item of orderItems) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: {
+          stock: { decrement: item.quantity }
+        }
+      })
+      // Update status to habis if stock becomes 0
+      const updatedProduct = await prisma.product.findUnique({ where: { id: item.productId } })
+      if (updatedProduct && updatedProduct.stock <= 0) {
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { status: 'habis' }
+        })
+      }
+    }
 
     res.status(201).json(order)
   } catch (e) {
@@ -216,9 +133,9 @@ router.get('/', authMiddleware, async (req, res) => {
 router.patch('/:id/status', authMiddleware, async (req, res) => {
   try {
     const { status } = req.body
-    const validStatuses = ['PENDING', 'PROCESS', 'DONE']
+    const validStatuses = ['PENDING', 'PROCESS', 'READY', 'PAID']
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Status tidak valid. Gunakan: PENDING, PROCESS, atau DONE' })
+      return res.status(400).json({ error: 'Status tidak valid. Gunakan: PENDING, PROCESS, READY, atau PAID' })
     }
     const order = await prisma.order.update({
       where: { id: parseInt(req.params.id) },

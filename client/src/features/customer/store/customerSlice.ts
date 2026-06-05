@@ -4,6 +4,7 @@ import { CartItem, CartItemModifier } from '@/types';
 interface CustomerState {
   tenantId: string | null;
   tableId: string | null;
+  tableName: string | null;
   customerName: string;
   customerPhone: string;
   items: CartItem[];
@@ -14,6 +15,7 @@ interface CustomerState {
 const initialState: CustomerState = {
   tenantId: null,
   tableId: null,
+  tableName: null,
   customerName: '',
   customerPhone: '',
   items: [],
@@ -29,9 +31,11 @@ const customerSlice = createSlice({
     setSessionInfo: (state, action: PayloadAction<{
       tenantId: string;
       tableId: string;
+      tableName: string;
     }>) => {
       state.tenantId = action.payload.tenantId;
       state.tableId = action.payload.tableId;
+      state.tableName = action.payload.tableName;
     },
     
     // 2. Setup Data Profil Pelanggan
@@ -127,6 +131,7 @@ const customerSlice = createSlice({
     resetCustomerSession: (state) => {
       state.tenantId = null;
       state.tableId = null;
+      state.tableName = null;
       state.customerName = '';
       state.customerPhone = '';
       state.items = [];

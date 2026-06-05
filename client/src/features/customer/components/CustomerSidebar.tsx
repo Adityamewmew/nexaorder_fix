@@ -2,7 +2,7 @@ import React from 'react';
 import { LayoutGrid, ShoppingCart, Coffee, Utensils, Cookie, Receipt } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
-import { Link } from 'react-router-dom';
+import { NavLink, Link, useParams } from 'react-router-dom';
 
 interface CustomerSidebarProps {
   categories: string[];
@@ -20,11 +20,12 @@ const getCategoryIcon = (categoryName: string) => {
 };
 
 const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ categories, activeCategory, onSelectCategory, onOpenCheckOrder }) => {
-  const { items, tenantId, tableId, orderId } = useSelector((state: RootState) => state.customer);
+  const { tenantId, items, orderId } = useSelector((state: RootState) => state.customer);
+  const { tableToken } = useParams();
   const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
 
   return (
-    <div className="hidden md:flex flex-col w-64 bg-brand-primary min-h-screen text-white sticky top-0 h-screen overflow-y-auto">
+    <div className="hidden md:flex flex-col w-64 bg-gradient-to-b from-[#0A3464] to-[#1469CA] min-h-screen text-white sticky top-0 h-screen overflow-y-auto">
       {/* Logo Area */}
       <div className="p-6 flex items-center gap-3 border-b border-white/10">
         <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-brand-primary font-black text-xl">
@@ -67,8 +68,8 @@ const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ categories, activeCat
 
       {/* Cart Button at Bottom */}
       <div className="p-4 border-t border-white/10 mt-auto">
-        <Link 
-          to={`/m/${tenantId}/${tableId}/cart`}
+        <Link
+          to={`/m/${tenantId}/${tableToken}/cart`}
           className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-brand-secondary hover:bg-brand-secondaryHover text-white font-bold transition-colors shadow-sm"
         >
           <div className="flex items-center gap-3">

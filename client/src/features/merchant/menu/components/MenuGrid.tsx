@@ -27,7 +27,7 @@ export default function MenuGrid({
           {/* Image Area */}
           <div className="h-48 w-full bg-slate-100 relative">
             {product.imageUrl ? (
-              <img src={product.imageUrl} alt={product.name} className={cn("w-full h-full object-cover transition-opacity", product.stock === 0 && "opacity-50 grayscale")} />
+              <img src={product.imageUrl.startsWith('http') ? product.imageUrl : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + product.imageUrl : `http://localhost:5000${product.imageUrl}`)} alt={product.name} className={cn("w-full h-full object-cover transition-opacity", product.stock === 0 && "opacity-50 grayscale")} />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-slate-400">
                 <ImageIcon className="w-10 h-10 opacity-50" />
@@ -51,12 +51,12 @@ export default function MenuGrid({
             <p className="text-xs text-slate-500 mb-4">{getCategoryName(product.categoryId)}</p>
             
             {/* Controls Area (Bottom) */}
-            <div className="mt-auto flex items-end justify-between pt-4 border-t border-slate-100">
-              {/* Stock Controls (Bisa diakses Kasir & Admin) */}
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Stok</p>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-0.5">
+            <div className="mt-auto pt-4 border-t border-slate-100 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                {/* Stock Controls (Bisa diakses Kasir & Admin) */}
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Stok</p>
+                  <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-0.5 w-fit">
                     <button 
                       onClick={() => handleUpdateStock(product.id, -1)}
                       className="w-7 h-7 flex items-center justify-center text-slate-500 hover:bg-white hover:text-brand-primary rounded-md transition-colors shadow-sm"
@@ -72,39 +72,38 @@ export default function MenuGrid({
                     </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Status & Edit */}
-              <div className="flex items-center gap-3">
                 {/* Status Badge */}
-                {product.stock > 5 ? (
-                  <span className="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-bold">Tersedia</span>
-                ) : product.stock > 0 ? (
-                  <span className="bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-bold">Hampir Habis</span>
-                ) : (
-                  <span className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold">Habis</span>
-                )}
-
-                {/* Edit & Delete Buttons (HANYA Admin) */}
-                {isAdmin && (
-                  <div className="flex gap-1.5">
-                    <button 
-                      onClick={() => navigate(`/merchant/menu/edit/${product.id}`)}
-                      className="w-9 h-9 flex items-center justify-center border border-slate-200 text-slate-600 hover:border-brand-primary hover:text-brand-primary hover:bg-brand-primary/5 rounded-lg transition-all"
-                      title="Edit Menu"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => onDelete(product.id)}
-                      className="w-9 h-9 flex items-center justify-center border border-slate-200 text-red-500 hover:border-red-500 hover:text-white hover:bg-red-500 rounded-lg transition-all"
-                      title="Hapus Menu"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
+                <div className="self-end mb-1">
+                  {product.stock > 5 ? (
+                    <span className="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-bold inline-block text-center min-w-[80px]">Tersedia</span>
+                  ) : product.stock > 0 ? (
+                    <span className="bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-bold inline-block text-center min-w-[80px]">Hampir Habis</span>
+                  ) : (
+                    <span className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold inline-block text-center min-w-[80px]">Habis</span>
+                  )}
+                </div>
               </div>
+
+              {/* Edit & Delete Buttons (HANYA Admin) */}
+              {isAdmin && (
+                <div className="flex gap-2 w-full mt-2">
+                  <button 
+                    onClick={() => navigate(`/merchant/menu/edit/${product.id}`)}
+                    className="flex-1 h-9 flex items-center justify-center gap-2 border border-slate-200 text-slate-600 hover:border-brand-primary hover:text-brand-primary hover:bg-brand-primary/5 rounded-lg transition-all text-xs font-bold"
+                    title="Edit Menu"
+                  >
+                    <Edit2 className="w-4 h-4" /> Edit
+                  </button>
+                  <button 
+                    onClick={() => onDelete(product.id)}
+                    className="flex-1 h-9 flex items-center justify-center gap-2 border border-slate-200 text-red-500 hover:border-red-500 hover:text-white hover:bg-red-500 rounded-lg transition-all text-xs font-bold"
+                    title="Hapus Menu"
+                  >
+                    <Trash2 className="w-4 h-4" /> Hapus
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

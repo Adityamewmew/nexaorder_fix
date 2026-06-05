@@ -37,7 +37,10 @@ export default function PlatformTenants() {
     }
   };
 
-  useEffect(() => { fetchMerchants(); }, []);
+  useEffect(() => { 
+    fetchMerchants(); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredMerchants = merchants.filter(m =>
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

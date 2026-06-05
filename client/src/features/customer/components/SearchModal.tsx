@@ -18,6 +18,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
 
   const [query, setQuery] = useState('');
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [products, setProducts] = useState<any[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +37,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
     } else {
 
       setQuery('');
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }
 
   }, [isOpen]);
@@ -68,6 +70,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
   const searchResults =
     query.trim() === ''
       ? []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       : products.filter((p: any) =>
           p.name.toLowerCase().includes(
             query.toLowerCase()
@@ -142,6 +145,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
 
               <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2">
 
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {recommendations.map((product: any) => (
 
                   <div
@@ -155,11 +159,19 @@ const SearchModal: React.FC<SearchModalProps> = ({
                     className="w-[140px] shrink-0 bg-brand-background rounded-xl shadow-sm overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col"
                   >
 
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-[100px] object-cover"
-                    />
+                      <div className="w-full h-[100px] bg-slate-200 relative">
+                        <img
+                          src={product.image ? (product.image.startsWith('http') ? product.image : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${product.image}`) : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=500&auto=format&fit=crop"}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (!target.src.includes("unsplash.com")) {
+                              target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=500&auto=format&fit=crop";
+                            }
+                          }}
+                        />
+                      </div>
 
                     <div className="p-3 flex-1 flex flex-col justify-between">
 
@@ -209,6 +221,7 @@ const SearchModal: React.FC<SearchModalProps> = ({
 
                 <div className="space-y-3">
 
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {searchResults.map((product: any) => (
 
                     <div
@@ -222,11 +235,19 @@ const SearchModal: React.FC<SearchModalProps> = ({
                       className="bg-brand-background p-3 rounded-xl shadow-sm flex gap-4 cursor-pointer active:scale-[0.98] transition-transform items-center"
                     >
 
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
+                      <div className="w-16 h-16 rounded-lg bg-slate-200 shrink-0 overflow-hidden relative">
+                        <img
+                          src={product.image ? (product.image.startsWith('http') ? product.image : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${product.image}`) : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=500&auto=format&fit=crop"}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (!target.src.includes("unsplash.com")) {
+                              target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=500&auto=format&fit=crop";
+                            }
+                          }}
+                        />
+                      </div>
 
                       <div className="flex-1">
 

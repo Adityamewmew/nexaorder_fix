@@ -9,7 +9,7 @@ import { updateCustomerItemQuantity, removeFromCustomerCart } from '@/features/c
 const CartPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { tenantId, tableId } = useParams();
+  const { tenantId, tableToken } = useParams();
   const { items } = useSelector((state: RootState) => state.customer);
   
   // State untuk animasi masuk (Slide Up)
@@ -18,7 +18,21 @@ const CartPage: React.FC = () => {
   useEffect(() => {
     // Trigger animasi setelah komponen di-mount
     setIsLoaded(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Untuk menangani tombol kembali bawaan browser
+  useEffect(() => {
+    const handlePopState = () => {
+      setIsLoaded(false);
+      setTimeout(() => {
+        navigate(`/m/${tenantId}/${tableToken}`);
+      }, 300);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [navigate, tenantId, tableToken]);
 
   const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
   const subtotal = items.reduce((sum, item) => {
@@ -34,14 +48,14 @@ const CartPage: React.FC = () => {
   const handleBack = () => {
     setIsLoaded(false); // Trigger animasi keluar
     setTimeout(() => {
-      navigate(`/m/${tenantId}/${tableId}`);
+      navigate(`/m/${tenantId}/${tableToken}`);
     }, 300); // Sesuaikan dengan durasi transisi Tailwind
   };
 
   const handleCheckout = () => {
     setIsLoaded(false); // Trigger animasi keluar
     setTimeout(() => {
-      navigate(`/m/${tenantId}/${tableId}/checkout`);
+      navigate(`/m/${tenantId}/${tableToken}/checkout`);
     }, 300);
   };
 
@@ -92,7 +106,7 @@ const CartPage: React.FC = () => {
 
             return (
               <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm flex gap-4 border border-slate-100">
-                <img src={item.imageUrl} alt={item.name} className="w-20 h-20 rounded-xl object-cover shrink-0" />
+                <img src={item.imageUrl?.startsWith('http') ? item.imageUrl : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + item.imageUrl : `http://localhost:5000${item.imageUrl}`)} alt={item.name} className="w-20 h-20 rounded-xl object-cover shrink-0" />
                 <div className="flex-1 flex flex-col">
                   <div className="flex justify-between items-start">
                     <h3 className="font-bold text-slate-800 text-sm leading-tight pr-2">{item.name}</h3>
@@ -107,9 +121,10 @@ const CartPage: React.FC = () => {
                   {/* Modifiers List */}
                   {item.modifiers.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
-                      {item.modifiers.map(mod => (
-                        <span key={mod.modifierId} className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-medium">
-                          {mod.modifierName}
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {item.modifiers.map((mod: any) => (
+                        <span key={mod.id} className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md font-medium">
+                          {mod.name}
                         </span>
                       ))}
                     </div>

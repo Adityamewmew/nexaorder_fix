@@ -26,8 +26,13 @@ const authSlice = createSlice({
       localStorage.removeItem('nexa_token');
       localStorage.removeItem('nexa_app_state');
     },
+    updateProfile: (state, action: PayloadAction<Partial<User>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
   },
 });
 
-export const { loginSuccess, logout } = authSlice.actions;
+export const { loginSuccess, logout, updateProfile } = authSlice.actions;
 export default authSlice.reducer;

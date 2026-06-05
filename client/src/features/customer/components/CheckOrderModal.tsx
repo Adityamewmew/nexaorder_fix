@@ -3,7 +3,7 @@ import { Search, X, Clock, ChevronRight, Receipt } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { useNavigate, useParams } from 'react-router-dom';
-import { formatRupiah } from '@/lib/utils';
+import api from '@/lib/api';
 
 interface CheckOrderModalProps {
   isOpen: boolean;
@@ -12,38 +12,30 @@ interface CheckOrderModalProps {
 
 const CheckOrderModal: React.FC<CheckOrderModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { tenantId, tableId } = useParams();
+  const { tenantId, tableToken } = useParams();
   
-  // Ambil semua order dari Redux (Di sistem nyata ini diambil dari API berdasarkan history device/user)
-  // Untuk prototipe ini, kita filter order yang berasal dari tenant dan meja ini (atau berdasarkan customerName)
-  const allOrders = useSelector((state: RootState) => state.orders.items);
-  const { customerName } = useSelector((state: RootState) => state.customer);
+  // Ambil orderId dari customer state untuk kemudahan
+  const { orderId } = useSelector((state: RootState) => state.customer);
   
   const [searchCode, setSearchCode] = useState('');
 
-  // Filter order historis milik pengguna ini (simulasi)
-  const myOrders = allOrders.filter(o => 
-    o.tenantId === tenantId && 
-    (o.customerName?.includes(customerName) || o.tableId === tableId)
-  ).slice(0, 5); // Ambil 5 terakhir
-
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchCode.trim()) return;
     
-    // Cari order berdasarkan ID
-    const foundOrder = allOrders.find(o => o.id.toLowerCase() === searchCode.toLowerCase().trim());
-    if (foundOrder) {
+    try {
+      // Cek apakah order ada di API
+      await api.get(`/orders/${searchCode.trim()}`);
       onClose();
-      navigate(`/m/${tenantId}/${tableId}/status/${foundOrder.id}`);
-    } else {
+      navigate(`/m/${tenantId}/${tableToken}/status/${searchCode.trim()}`);
+    } catch (err) {
       alert(`Pesanan dengan kode "${searchCode}" tidak ditemukan.`);
     }
   };
 
-  const goToStatus = (orderId: string) => {
+  const goToStatus = (id: string) => {
     onClose();
-    navigate(`/m/${tenantId}/${tableId}/status/${orderId}`);
+    navigate(`/m/${tenantId}/${tableToken}/status/${id}`);
   };
 
   return (
@@ -104,33 +96,24 @@ const CheckOrderModal: React.FC<CheckOrderModalProps> = ({ isOpen, onClose }) =>
             Pesanan Terakhir Kamu
           </h3>
 
-          {myOrders.length > 0 ? (
+          {orderId ? (
             <div className="space-y-3">
-              {myOrders.map(order => (
-                <div 
-                  key={order.id}
-                  onClick={() => goToStatus(order.id)}
-                  className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform"
-                >
-                  <div className="w-12 h-12 bg-brand-primary/5 rounded-xl flex items-center justify-center text-brand-primary">
-                    <Receipt className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-bold text-slate-800">{order.id}</h4>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                        order.status === 'READY' ? 'bg-brand-success/10 text-brand-success' : 
-                        order.status === 'PROCESS' ? 'bg-blue-100 text-blue-600' : 'bg-brand-secondary/10 text-brand-secondary'
-                      }`}>
-                        {order.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mb-1">{order.items.length} item • {order.createdAt}</p>
-                    <p className="text-sm font-bold text-brand-primary">{formatRupiah(order.totalAmount)}</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-slate-300" />
+              <div 
+                onClick={() => goToStatus(String(orderId))}
+                className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform"
+              >
+                <div className="w-12 h-12 bg-brand-primary/5 rounded-xl flex items-center justify-center text-brand-primary">
+                  <Receipt className="w-6 h-6" />
                 </div>
-              ))}
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className="font-bold text-slate-800">Pesanan Aktif</h4>
+                  </div>
+                  <p className="text-xs text-slate-500 mb-1">ID: #{orderId}</p>
+                  <p className="text-sm font-bold text-brand-primary">Lacak Sekarang</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-300" />
+              </div>
             </div>
           ) : (
             <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-200">

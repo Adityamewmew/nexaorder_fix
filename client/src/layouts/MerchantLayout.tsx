@@ -10,25 +10,41 @@ import { cn } from "@/lib/utils";
 import { logout } from "@/features/auth/authSlice";
 import { RootState } from "@/store";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import api from "@/lib/api";
 
 export default function MerchantLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const pendingOrdersCount = useSelector((state: RootState) => 
-    state.orders.items.filter(o => o.status === 'PENDING').length
-  );
   
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
-  // Deteksi pesanan baru untuk memainkan suara
   const prevPendingCount = useRef(pendingOrdersCount);
+
+  // Fetch pending orders count
+  useEffect(() => {
+    const fetchPendingOrders = async () => {
+      try {
+        const res = await api.get('/orders?status=PENDING');
+        setPendingOrdersCount(res.data.length);
+      } catch (err) {
+        console.error("Gagal memuat jumlah antrian pesanan", err);
+      }
+    };
+
+    fetchPendingOrders();
+    const interval = setInterval(fetchPendingOrders, 10000); // Polling every 10s
+    return () => clearInterval(interval);
+  }, []);
+
+  // Deteksi pesanan baru untuk memainkan suara
   useEffect(() => {
     if (pendingOrdersCount > prevPendingCount.current) {
-      // Mainkan suara notifikasi (menggunakan beep pendek bawaan browser/base64)
+      // Play a simple notification sound when new order arrives
       const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"); // Dummy short beep
       audio.play().catch(() => console.log("Audio autoplay prevented by browser"));
     }

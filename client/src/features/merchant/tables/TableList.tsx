@@ -11,6 +11,7 @@ interface Table {
   id: number;
   number: string;
   status: string;
+  token: string;
 }
 
 export default function TableList() {
@@ -108,8 +109,8 @@ export default function TableList() {
     }
   };
 
-  const generateCustomerUrl = (tableId: number) => {
-    return `${window.location.origin}/m/merchant/${tableId}`;
+  const generateCustomerUrl = (token: string) => {
+    return `${window.location.origin}/m/merchant/${token}`;
   };
 
   if (loading) {
@@ -212,7 +213,7 @@ export default function TableList() {
                   <div className="bg-white p-3 rounded-xl shadow-sm">
                     <QRCodeSVG
                       id={`qr-${table.id}`}
-                      value={generateCustomerUrl(table.id)}
+                      value={generateCustomerUrl(table.token)}
                       size={180}
                       level="H"
                       includeMargin={false}
@@ -231,7 +232,7 @@ export default function TableList() {
             <div className="p-4 border-t border-slate-100 grid grid-cols-2 gap-3 bg-white">
               {table.status === "aktif" ? (
                 <>
-                  <a href={generateCustomerUrl(table.id)} target="_blank" rel="noopener noreferrer"
+                  <a href={generateCustomerUrl(table.token)} target="_blank" rel="noopener noreferrer"
                     className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-brand-primary hover:border-brand-primary transition-colors font-bold text-xs">
                     <ExternalLink className="w-4 h-4" />
                     BUKA WEB

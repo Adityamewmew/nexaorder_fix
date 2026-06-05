@@ -2,11 +2,12 @@ import React from 'react';
 import { ShoppingBasket } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { formatRupiah } from '@/lib/utils';
 
 const FloatingCart: React.FC = () => {
-  const { items, tenantId, tableId } = useSelector((state: RootState) => state.customer);
+  const { items, tenantId } = useSelector((state: RootState) => state.customer);
+  const { tableToken } = useParams();
   const navigate = useNavigate();
 
   // Hitung total harga & jumlah
@@ -23,7 +24,7 @@ const FloatingCart: React.FC = () => {
     <div className="fixed bottom-4 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
       {/* Constraint width matching layout */}
       <div className="w-full max-w-[448px] bg-brand-success rounded-xl shadow-lg p-4 flex items-center justify-between text-white pointer-events-auto cursor-pointer active:scale-[0.98] transition-transform"
-           onClick={() => navigate(`/m/${tenantId}/${tableId}/cart`)}>
+           onClick={() => navigate(`/m/${tenantId}/${tableToken}/cart`)}>
         
         <div className="flex items-center gap-4">
           <div className="relative">

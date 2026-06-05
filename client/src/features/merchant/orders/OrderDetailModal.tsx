@@ -3,11 +3,13 @@ import { Order, OrderStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface OrderDetailModalProps {
-  order: Order | null;
+  order: any | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdateStatus: (orderId: string, newStatus: OrderStatus) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onUpdateStatus: (orderId: string, newStatus: any) => void;
   onProcessPayment: (orderId: string, method: "CASH" | "QRIS" | "TRANSFER") => void;
 }
 
@@ -19,8 +21,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
   const isTakeaway = order.customerName?.toLowerCase().includes("takeaway");
   
   // Hitung ulang dari items untuk dapatkan pajak (asumsi pajak 10%)
-  const subtotal = order.totalAmount / 1.1;
-  const tax = order.totalAmount - subtotal;
+  const subtotal = order.total / 1.1;
+  const tax = order.total - subtotal;
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
@@ -46,10 +48,23 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
               </span>
             </div>
             <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1.5 font-medium">
-                {isTakeaway ? <ShoppingBag className="w-4 h-4" /> : <UtensilsCrossed className="w-4 h-4" />}
-                {order.customerName}
-              </span>
+              {order.table ? (
+                <span className="flex items-center gap-1.5 font-medium px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100">
+                  <UtensilsCrossed className="w-4 h-4" />
+                  Meja {order.table.number}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 font-medium px-2 py-1 rounded bg-purple-50 text-purple-600 border border-purple-100">
+                  <ShoppingBag className="w-4 h-4" />
+                  Takeaway
+                </span>
+              )}
+              {order.customerName && (
+                <>
+                  <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                  <span className="font-medium text-slate-700">{order.customerName}</span>
+                </>
+              )}
               <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
               <span>Waktu Pesan: <strong>{order.createdAt}</strong></span>
             </div>
@@ -71,10 +86,21 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
           <h3 className="font-bold text-slate-800 mb-4 text-lg">Rincian Pesanan</h3>
           
           <div className="space-y-4">
-            {order.items.map((item) => {
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {order.items.map((item: any) => {
               // Kalkulasi total per item (harga dasar + addons) * qty
-              const itemAddonsTotal = item.modifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0;
-              const itemTotal = (item.priceAtOrder + itemAddonsTotal) * item.quantity;
+              let parsedToppings: any[] = [];
+              try {
+                if (item.toppings) {
+                  parsedToppings = JSON.parse(item.toppings);
+                }
+              } catch (e) {
+                console.error("Error parsing toppings", e);
+              }
+              
+              const itemAddonsTotal = parsedToppings.reduce((sum: number, mod: any) => sum + (mod.price || 0), 0);
+              const basePrice = item.product?.price || 0;
+              const itemTotal = (basePrice + itemAddonsTotal) * item.quantity;
 
               return (
                 <div key={item.id} className="flex gap-4 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
@@ -83,22 +109,23 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-bold text-slate-800 text-base">{item.productName}</h4>
+                      <h4 className="font-bold text-slate-800 text-base">{item.product?.name || "Produk dihapus"}</h4>
                       <span className="font-bold text-slate-800">Rp {itemTotal.toLocaleString('id-ID')}</span>
                     </div>
                     
                     <div className="text-sm text-slate-500 mb-1">
-                      @ Rp {item.priceAtOrder.toLocaleString('id-ID')}
+                      @ Rp {basePrice.toLocaleString('id-ID')}
                     </div>
 
                     {/* Render Addons */}
-                    {item.modifiers && item.modifiers.length > 0 && (
+                    {parsedToppings.length > 0 && (
                       <div className="mt-2 space-y-1">
-                        {item.modifiers.map((mod, idx) => (
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {parsedToppings.map((mod: any, idx: number) => (
                           <div key={idx} className="flex justify-between text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded">
                             <span className="flex items-center gap-1.5">
                               <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
-                              {mod.modifierName}
+                              {mod.name}
                             </span>
                             {mod.price > 0 && <span className="font-medium">+Rp {mod.price.toLocaleString('id-ID')}</span>}
                           </div>
@@ -107,9 +134,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
                     )}
 
                     {/* Render Notes */}
-                    {item.notes && (
+                    {item.note && (
                       <div className="mt-2 text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-100 italic font-medium">
-                        Catatan: "{item.notes}"
+                        Catatan: "{item.note}"
                       </div>
                     )}
                   </div>
@@ -119,13 +146,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
           </div>
 
           {/* Bagian Validasi Pembayaran (Hanya muncul jika belum lunas) */}
-          {order.paymentMethod === 'UNPAID' && (
+          {!order.payment && (
             <div className="mt-8 p-5 bg-brand-primary/5 border border-brand-primary/20 rounded-xl">
               <h3 className="font-bold text-brand-primary mb-3 flex items-center gap-2">
                 <CreditCard className="w-5 h-5" />
                 Pilih Metode Pembayaran
               </h3>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setPaymentMethod("CASH")}
                   className={cn(
@@ -134,7 +161,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
                   )}
                 >
                   <Banknote className={cn("w-6 h-6", paymentMethod === "CASH" ? "text-brand-primary" : "text-slate-400")} />
-                  <span className={cn("text-sm font-bold", paymentMethod === "CASH" ? "text-brand-primary" : "text-slate-500")}>Tunai</span>
+                  <span className={cn("text-sm font-bold", paymentMethod === "CASH" ? "text-brand-primary" : "text-slate-500")}>Tunai (Kasir)</span>
                 </button>
                 <button
                   onClick={() => setPaymentMethod("QRIS")}
@@ -145,16 +172,6 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
                 >
                   <QrCode className={cn("w-6 h-6", paymentMethod === "QRIS" ? "text-brand-primary" : "text-slate-400")} />
                   <span className={cn("text-sm font-bold", paymentMethod === "QRIS" ? "text-brand-primary" : "text-slate-500")}>QRIS</span>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod("TRANSFER")}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2",
-                    paymentMethod === "TRANSFER" ? "border-brand-primary bg-white shadow-sm" : "border-transparent bg-white/50 hover:bg-white"
-                  )}
-                >
-                  <CreditCard className={cn("w-6 h-6", paymentMethod === "TRANSFER" ? "text-brand-primary" : "text-slate-400")} />
-                  <span className={cn("text-sm font-bold", paymentMethod === "TRANSFER" ? "text-brand-primary" : "text-slate-500")}>Transfer</span>
                 </button>
               </div>
             </div>
@@ -174,7 +191,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
             </div>
             <div className="flex justify-between items-center pt-2 border-t border-slate-100">
               <span className="font-bold text-slate-800 text-lg">Total Pembayaran</span>
-              <span className="font-bold text-brand-primary text-2xl">Rp {order.totalAmount.toLocaleString('id-ID')}</span>
+              <span className="font-bold text-brand-primary text-2xl">Rp {(order.total || 0).toLocaleString('id-ID')}</span>
             </div>
           </div>
 

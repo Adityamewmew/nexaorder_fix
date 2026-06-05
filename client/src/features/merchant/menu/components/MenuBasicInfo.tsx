@@ -1,6 +1,7 @@
-import { ImagePlus, AlertCircle, ArrowRight } from "lucide-react";
+import { ImagePlus, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { useRef, useState } from "react";
 
 interface MenuBasicInfoProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -8,11 +9,23 @@ interface MenuBasicInfoProps {
   categories: { id: string; name: string }[];
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   handleToggleAvailability: () => void;
+  handleImageUpload: (file: File) => Promise<void>;
   onNext: () => void;
 }
 
-export default function MenuBasicInfo({ formData, categories, handleInputChange, handleToggleAvailability, onNext }: MenuBasicInfoProps) {
+export default function MenuBasicInfo({ formData, categories, handleInputChange, handleToggleAvailability, handleImageUpload, onNext }: MenuBasicInfoProps) {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    await handleImageUpload(file);
+    setIsUploading(false);
+  };
 
   return (
     <div className="bg-white rounded-2xl border-2 border-brand-secondary/30 shadow-sm overflow-hidden flex flex-col">
@@ -21,15 +34,43 @@ export default function MenuBasicInfo({ formData, categories, handleInputChange,
         {/* Sisi Kiri: Upload Foto */}
         <div className="md:col-span-4 flex flex-col">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Foto Menu</label>
-          <div className="flex-1 min-h-[250px] border-2 border-dashed border-slate-300 bg-slate-50/50 rounded-2xl flex flex-col items-center justify-center p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer group">
-            <div className="w-14 h-14 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <ImagePlus className="w-6 h-6 text-brand-secondary" />
-            </div>
-            <h4 className="font-bold text-slate-700 mb-1">Drag & Drop Image</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Format: JPG, PNG (Max. 1MB).<br />
-              Rekomendasi rasio 1:1 untuk tampilan terbaik.
-            </p>
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="flex-1 min-h-[250px] border-2 border-dashed border-slate-300 bg-slate-50/50 rounded-2xl flex flex-col items-center justify-center p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer group relative overflow-hidden"
+          >
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/png, image/jpeg, image/jpg, image/webp"
+              onChange={onFileChange}
+            />
+            {isUploading ? (
+              <div className="flex flex-col items-center justify-center">
+                <Loader2 className="w-8 h-8 text-brand-secondary animate-spin mb-2" />
+                <span className="text-sm font-semibold text-slate-600">Mengunggah...</span>
+              </div>
+            ) : formData.imageUrl ? (
+              <div className="absolute inset-0 w-full h-full p-2">
+                <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + formData.imageUrl : `http://localhost:5000${formData.imageUrl}`} alt="Preview" className="w-full h-full object-cover rounded-xl shadow-sm" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl m-2">
+                  <span className="text-white font-semibold text-sm flex items-center gap-2">
+                    <ImagePlus className="w-4 h-4" /> Ganti Foto
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="w-14 h-14 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <ImagePlus className="w-6 h-6 text-brand-secondary" />
+                </div>
+                <h4 className="font-bold text-slate-700 mb-1">Upload Image</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Format: JPG, PNG (Max. 2MB).<br />
+                  Rekomendasi rasio 1:1.
+                </p>
+              </>
+            )}
           </div>
         </div>
 

@@ -31,10 +31,11 @@ const CheckoutPage: React.FC = () => {
 
   const dispatch = useDispatch();
 
-  const { tenantId, tableId } = useParams();
+  const { tenantId, tableToken } = useParams();
 
   const {
     items,
+    tableId,
     customerName,
     customerPhone
   } = useSelector((state: RootState) => state.customer);
@@ -55,7 +56,7 @@ const CheckoutPage: React.FC = () => {
   // REDIRECT JIKA CART KOSONG
   if (items.length === 0 && !isSuccess) {
 
-    navigate(`/m/${tenantId}/${tableId}`);
+    navigate(`/m/${tenantId}/${tableToken}`);
 
     return null;
   }
@@ -74,7 +75,7 @@ const CheckoutPage: React.FC = () => {
 
   const handleBack = () => {
 
-    navigate(`/m/${tenantId}/${tableId}/cart`);
+    navigate(`/m/${tenantId}/${tableToken}/cart`);
   };
 
   // HANDLE PAYMENT
@@ -97,11 +98,13 @@ const CheckoutPage: React.FC = () => {
       // CREATE ORDER
       const orderRes = await api.post('/orders', {
 
+        tenantId,
+
         tableId: Number(tableId),
 
         customerName: name,
 
-        phone,
+        customerPhone: phone,
 
         items: items.map((item) => ({
 
@@ -111,7 +114,9 @@ const CheckoutPage: React.FC = () => {
 
           quantity: item.qty,
 
-          note: item.notes
+          note: item.notes,
+          
+          toppings: item.modifiers && item.modifiers.length > 0 ? JSON.stringify(item.modifiers) : null
         }))
       });
 
@@ -132,19 +137,17 @@ const CheckoutPage: React.FC = () => {
       // SUCCESS SCREEN
       setIsSuccess(true);
 
-      // CLEAR CART
-      dispatch(clearCustomerCart());
-
       // REDIRECT
       setTimeout(() => {
-
+        // Pindahkan Clear Cart ke sini agar komponen tidak me-re-render terlalu cepat
+        dispatch(clearCustomerCart());
         navigate(
-          `/m/${tenantId}/${tableId}/status/${orderId}`,
+          `/m/${tenantId}/${tableToken}/status/${orderId}`,
           { replace: true }
         );
+      }, 2500);
 
-      }, 1500);
-
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
 
       console.log(err);
@@ -165,7 +168,7 @@ const CheckoutPage: React.FC = () => {
 
     return (
 
-      <div className="min-h-screen bg-brand-success flex flex-col items-center justify-center p-6 text-white text-center animate-in fade-in duration-500">
+      <div className="fixed inset-0 z-[999] bg-brand-success flex flex-col items-center justify-center p-6 text-white text-center animate-in fade-in duration-500">
 
         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 animate-bounce">
 

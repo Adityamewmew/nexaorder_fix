@@ -7,7 +7,6 @@ interface PosCartAreaProps {
   customerName: string;
   customerPhone: string;
   subtotal: number;
-  tax: number;
   total: number;
   onUpdateCustomerName: (name: string) => void;
   onUpdateCustomerPhone: (phone: string) => void;
@@ -20,7 +19,7 @@ interface PosCartAreaProps {
 
 export default function PosCartArea({
   cart, orderType, customerName, customerPhone,
-  subtotal, tax, total,
+  subtotal, total,
   onUpdateCustomerName, onUpdateCustomerPhone,
   onRemoveItem, onUpdateQty, onClearCart,
   onCheckout, isProcessing
@@ -85,7 +84,7 @@ export default function PosCartArea({
         <div className="space-y-4 pt-4 border-t border-slate-100">
           {cart.map((item) => (
             <div key={item.id} className="flex gap-3 bg-slate-50/50 p-2 rounded-xl border border-slate-100">
-              <img src={item.imageUrl} alt={item.name} className="w-12 h-12 rounded-lg object-cover bg-slate-100 shrink-0 border border-slate-200" />
+              <img src={item.imageUrl?.startsWith('http') ? item.imageUrl : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + item.imageUrl : `http://localhost:5000${item.imageUrl}`)} alt={item.name} className="w-12 h-12 rounded-lg object-cover bg-slate-100 shrink-0 border border-slate-200" />
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start mb-0.5">
                   <h4 className="font-bold text-slate-800 text-sm truncate pr-2">{item.name}</h4>
@@ -98,16 +97,16 @@ export default function PosCartArea({
                 </div>
                 
                 {/* Render Modifiers (Add-ons) jika ada */}
-                {item.modifiers && item.modifiers.length > 0 && (
-                  <div className="mb-2 space-y-0.5">
-                    {item.modifiers.map((mod, idx) => (
-                      <div key={idx} className="text-[10px] text-slate-500 flex justify-between">
-                        <span>+ {mod.modifierName}</span>
-                        {mod.price > 0 && <span>+{(mod.price * item.qty).toLocaleString('id-ID')}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  {item.modifiers && item.modifiers.length > 0 && (
+                    <div className="mb-2 space-y-0.5">
+                      {item.modifiers.map((mod, idx) => (
+                        <div key={idx} className="text-[10px] text-slate-500 flex justify-between">
+                          <span>+ {mod.modifierName || mod.name}</span>
+                          {mod.price > 0 && <span>+{(mod.price * item.qty).toLocaleString('id-ID')}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                 <div className="text-brand-primary font-semibold text-xs mb-2">
                   Rp. {item.price.toLocaleString('id-ID')} <span className="text-slate-400 font-normal">/ item</span>
@@ -156,10 +155,6 @@ export default function PosCartArea({
           <div className="flex justify-between text-sm text-slate-500 font-medium">
             <span>Subtotal</span>
             <span>Rp. {subtotal.toLocaleString('id-ID')}</span>
-          </div>
-          <div className="flex justify-between text-sm text-slate-500 font-medium">
-            <span>Pajak (10%)</span>
-            <span>Rp. {tax.toLocaleString('id-ID')}</span>
           </div>
         </div>
         <div className="flex justify-between items-center mb-6">

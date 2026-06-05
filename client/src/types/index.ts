@@ -11,13 +11,16 @@ export interface Tenant {
 }
 
 export interface User {
-  id: string;
-  tenantId?: string;
-  name: string;
-  username?: string;
+  id: number;
+  username: string;
   email?: string;
-  role: Role;
+  name: string;
+  role: string;
+  status: string;
+  photo?: string | null;
+  createdAt?: string;
 }
+
 
 export interface Category {
   id: string;

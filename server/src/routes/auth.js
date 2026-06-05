@@ -50,7 +50,14 @@ router.post('/register', authMiddleware, adminOnly, async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10)
     const user = await prisma.user.create({
-      data: { username, email: email || null, password: hashed, name, role, photo: photo || null }
+      data: {
+        username,
+        email: email || null,
+        password: hashed,
+        name,
+        role,
+        photo: photo || null
+      }
     })
 
     res.status(201).json({ id: user.id, username: user.username, email: user.email, name: user.name, role: user.role })

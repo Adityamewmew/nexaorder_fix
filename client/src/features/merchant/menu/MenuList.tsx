@@ -86,6 +86,7 @@ export default function MenuList() {
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, originalProducts]);
 
   const categories = [

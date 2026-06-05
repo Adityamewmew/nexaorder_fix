@@ -30,8 +30,10 @@ const MenuCatalogPage: React.FC = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   // API STATES
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [products, setProducts] = useState<any[]>([]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [categories, setCategories] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -63,6 +65,8 @@ const MenuCatalogPage: React.FC = () => {
 
   }, []);
 
+  const [storeName, setStoreName] = useState('Nexa Order');
+
   // FETCH API
   useEffect(() => {
 
@@ -74,11 +78,38 @@ const MenuCatalogPage: React.FC = () => {
 
         // FETCH PRODUCTS
         const productsRes = await api.get('/products');
+        
+        // Transform the response to ensure modifierGroups are correctly mapped to frontend format
+        const transformedProducts = productsRes.data.map((p: any) => ({
+          ...p,
+          modifierGroups: p.modifierGroups ? p.modifierGroups.map((g: any) => ({
+            id: String(g.id),
+            groupName: g.name,
+            isRequired: g.isRequired,
+            minSelections: g.minSelections,
+            maxSelections: g.maxSelections,
+            modifiers: g.modifiers.map((m: any) => ({
+              id: String(m.id),
+              modifierName: m.name,
+              price: m.price
+            }))
+          })) : []
+        }));
 
         // FETCH CATEGORIES
         const categoriesRes = await api.get('/categories');
+        
+        // FETCH STORE PROFILE
+        try {
+          const profileRes = await api.get('/dashboard/profile');
+          if (profileRes.data && profileRes.data.name) {
+            setStoreName(profileRes.data.name);
+          }
+        } catch (e) {
+          // ignore profile fetch error
+        }
 
-        setProducts(productsRes.data);
+        setProducts(transformedProducts);
 
         setCategories(categoriesRes.data);
 
@@ -110,12 +141,10 @@ const MenuCatalogPage: React.FC = () => {
     }
   };
 
-  // STATIC TENANT NAME
-  const tenantName = 'Nexa Order';
-
   // DYNAMIC CATEGORIES
   const dynamicCategories = [
     'Semua',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...categories.map((c: any) => c.name)
   ];
 
@@ -130,6 +159,7 @@ const MenuCatalogPage: React.FC = () => {
   ) => {
 
     const filteredProducts = products.filter(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (p: any) => p.categoryId === categoryId
     );
 
@@ -145,6 +175,7 @@ const MenuCatalogPage: React.FC = () => {
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
 
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {filteredProducts.map((product: any) => (
 
             <MenuCard
@@ -152,7 +183,7 @@ const MenuCatalogPage: React.FC = () => {
               id={product.id}
               name={product.name}
               price={product.price}
-              imageUrl={product.image}
+              imageUrl={product.image?.startsWith('http') ? product.image : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + product.image : `http://localhost:5000${product.image}`)}
               isAvailable={product.status === 'tersedia'}
               onClick={() => handleMenuClick(product.id)}
             />
@@ -198,7 +229,7 @@ const MenuCatalogPage: React.FC = () => {
       {/* MAIN CONTENT */}
       <div
         id="main-scroll-container"
-        className="flex-1 flex flex-col pb-24 md:pb-8 h-screen overflow-y-auto relative scroll-smooth"
+        className="flex-1 flex flex-col pb-24 md:pb-8 h-screen overflow-y-auto relative scroll-smooth w-full"
       >
 
         {/* MOBILE CHECK ORDER */}
@@ -206,7 +237,7 @@ const MenuCatalogPage: React.FC = () => {
 
           <button
             onClick={() => setIsCheckOrderOpen(true)}
-            className="md:hidden fixed top-24 right-4 z-40 bg-white/90 backdrop-blur-sm text-brand-secondary px-4 py-2 rounded-full font-bold shadow-lg border border-slate-100 flex items-center gap-2 animate-bounce"
+            className="md:hidden fixed bottom-24 right-4 z-40 bg-white/90 backdrop-blur-sm text-brand-secondary px-4 py-2 rounded-full font-bold shadow-lg border border-slate-100 flex items-center gap-2 animate-bounce"
           >
 
             <Receipt className="w-4 h-4" />
@@ -223,7 +254,7 @@ const MenuCatalogPage: React.FC = () => {
 
           {/* HEADER */}
           <CustomerHeader
-            tenantName={tenantName}
+            tenantName={storeName}
             onOpenSearch={() => setIsSearchOpen(true)}
           />
 
@@ -243,6 +274,7 @@ const MenuCatalogPage: React.FC = () => {
             {activeCategory === 'Semua' ? (
 
               <>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {categories.map((cat: any) =>
                   renderProductGrid(cat.name, cat.id)
                 )}
@@ -265,12 +297,14 @@ const MenuCatalogPage: React.FC = () => {
                 {(() => {
 
                   const activeCatObj = categories.find(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (c: any) => c.name === activeCategory
                   );
 
                   if (!activeCatObj) return null;
 
                   const filteredProducts = products.filter(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (p: any) => p.categoryId === activeCatObj.id
                   );
 
@@ -296,8 +330,9 @@ const MenuCatalogPage: React.FC = () => {
                         {activeCategory}
                       </h2>
 
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
 
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         {filteredProducts.map((product: any) => (
 
                           <MenuCard
@@ -305,7 +340,7 @@ const MenuCatalogPage: React.FC = () => {
                             id={product.id}
                             name={product.name}
                             price={product.price}
-                            imageUrl={product.image}
+                            imageUrl={product.image?.startsWith('http') ? product.image : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + product.image : `http://localhost:5000${product.image}`)}
                             isAvailable={product.status === 'tersedia'}
                             onClick={() => handleMenuClick(product.id)}
                           />
@@ -330,7 +365,7 @@ const MenuCatalogPage: React.FC = () => {
 
         <button
           onClick={scrollToTop}
-          className="md:hidden fixed bottom-24 right-4 z-40 bg-white text-brand-primary p-3 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-100 hover:bg-slate-50 transition-all"
+          className="md:hidden fixed bottom-6 right-4 z-40 bg-white text-brand-primary p-3 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-slate-100 hover:bg-slate-50 transition-all"
         >
 
           <ArrowUp className="w-5 h-5" />

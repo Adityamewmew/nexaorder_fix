@@ -4,6 +4,9 @@ import { logout } from '@/features/auth/authSlice';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  headers: {
+    'ngrok-skip-browser-warning': 'true', // Melewati peringatan browser ngrok
+  }
 });
 
 api.interceptors.request.use((config) => {

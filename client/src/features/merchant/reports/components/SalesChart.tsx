@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
@@ -7,11 +7,19 @@ import {
 
 interface SalesChartProps {
   data: Array<{ name: string; total: number }>;
+  summaryData: {
+    average: number;
+    highest: number;
+    lowest: number;
+    trend: number;
+  };
 }
 
-export default function SalesChart({ data }: SalesChartProps) {
+export default function SalesChart({ data, summaryData }: SalesChartProps) {
   const [chartType, setChartType] = useState<"line" | "bar">("line");
-  const [chartRange, setChartRange] = useState("Minggu");
+  const [chartRange, setChartRange] = useState("Harian");
+
+  const formatCurrency = (value: number) => `Rp. ${Math.round(value).toLocaleString('id-ID')}`;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -20,20 +28,6 @@ export default function SalesChart({ data }: SalesChartProps) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <h3 className="font-bold text-lg text-slate-800">Grafik Penjualan</h3>
-            <div className="flex bg-slate-100 p-1 rounded-lg">
-              {['Harian', 'Minggu', 'Bulan'].map(range => (
-                <button
-                  key={range}
-                  onClick={() => setChartRange(range)}
-                  className={cn(
-                    "px-3 py-1 text-xs font-bold rounded-md transition-colors",
-                    chartRange === range ? "bg-white text-brand-secondary shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  )}
-                >
-                  {range}
-                </button>
-              ))}
-            </div>
           </div>
           
           {/* Chart Type Toggle */}
@@ -77,6 +71,7 @@ export default function SalesChart({ data }: SalesChartProps) {
                   tick={{ fontSize: 12, fill: '#64748b' }}
                   tickFormatter={(value) => `Rp. ${value.toLocaleString('id-ID')}`}
                   dx={-10}
+                  width={90}
                 />
                 <Tooltip 
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,7 +79,7 @@ export default function SalesChart({ data }: SalesChartProps) {
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
                 <Line 
-                  type="linear" 
+                  type="monotone" 
                   dataKey="total" 
                   stroke="#FBA518" 
                   strokeWidth={3} 
@@ -108,6 +103,7 @@ export default function SalesChart({ data }: SalesChartProps) {
                   tick={{ fontSize: 12, fill: '#64748b' }}
                   tickFormatter={(value) => `Rp. ${value.toLocaleString('id-ID')}`}
                   dx={-10}
+                  width={90}
                 />
                 <Tooltip 
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -129,22 +125,34 @@ export default function SalesChart({ data }: SalesChartProps) {
         <div className="space-y-6 flex-1">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4">
             <span className="text-sm text-slate-500 font-medium">Rata rata per hari</span>
-            <span className="font-bold text-slate-800">Rp. 440.000</span>
+            <span className="font-bold text-slate-800">{formatCurrency(summaryData.average)}</span>
           </div>
           <div className="flex justify-between items-center border-b border-slate-100 pb-4">
             <span className="text-sm text-slate-500 font-medium">Penjualan Tertinggi</span>
-            <span className="font-bold text-slate-800">Rp. 700.000</span>
+            <span className="font-bold text-emerald-600">{formatCurrency(summaryData.highest)}</span>
           </div>
           <div className="flex justify-between items-center border-b border-slate-100 pb-4">
             <span className="text-sm text-slate-500 font-medium">Penjualan Terendah</span>
-            <span className="font-bold text-slate-800">Rp. 300.000</span>
+            <span className="font-bold text-red-500">{formatCurrency(summaryData.lowest)}</span>
           </div>
           <div className="flex justify-between items-center pt-2">
-            <span className="text-sm font-bold text-slate-800">Tren Penjualan</span>
-            <div className="px-3 py-1 bg-green-100 text-green-700 rounded-lg flex items-center gap-1 font-bold text-xs">
-              <TrendingUp className="w-3 h-3" />
-              Naik 10%
-            </div>
+            <span className="text-sm font-bold text-slate-800">Tren vs Kemarin</span>
+            {summaryData.trend > 0 ? (
+              <div className="px-3 py-1 bg-green-100 text-green-700 rounded-lg flex items-center gap-1 font-bold text-xs">
+                <TrendingUp className="w-3 h-3" />
+                Naik {summaryData.trend.toFixed(1)}%
+              </div>
+            ) : summaryData.trend < 0 ? (
+              <div className="px-3 py-1 bg-red-100 text-red-700 rounded-lg flex items-center gap-1 font-bold text-xs">
+                <TrendingDown className="w-3 h-3" />
+                Turun {Math.abs(summaryData.trend).toFixed(1)}%
+              </div>
+            ) : (
+              <div className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg flex items-center gap-1 font-bold text-xs">
+                <Minus className="w-3 h-3" />
+                Stabil
+              </div>
+            )}
           </div>
         </div>
       </div>

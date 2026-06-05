@@ -31,6 +31,7 @@ export default function PlatformLogin() {
 
       dispatch(loginSuccess({ user, token }));
       navigate("/platform/dashboard");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setErrorMsg(err.response?.data?.error || "Email atau password salah.");
     } finally {
@@ -125,12 +126,6 @@ export default function PlatformLogin() {
               )}
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center text-sm text-slate-500">
-            <p className="mb-2 font-semibold text-slate-700">Info Akun</p>
-            <p className="mb-1">Email: <span className="font-bold text-[#0B3B60]">admin@nexaorder.com</span></p>
-            <p>Password: <span className="font-bold text-slate-700">admin123</span></p>
-          </div>
         </div>
       </div>
     </div>

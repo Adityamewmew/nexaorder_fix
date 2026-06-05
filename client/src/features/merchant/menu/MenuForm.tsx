@@ -39,7 +39,7 @@ export default function MenuForm() {
         setFormData(prev => ({ ...prev, categoryId: cats[0].id }));
       }
     });
-  }, []);
+  }, [isEditMode]);
 
   // Fetch existing product if edit mode
   useEffect(() => {
@@ -55,15 +55,44 @@ export default function MenuForm() {
         isAvailable: p.status === "tersedia",
         imageUrl: p.image || "",
       });
+      if (p.modifierGroups && p.modifierGroups.length > 0) {
+        setModifierGroups(p.modifierGroups.map((g: any) => ({
+          id: String(g.id),
+          groupName: g.name,
+          isRequired: g.isRequired,
+          minSelections: g.minSelections,
+          maxSelections: g.maxSelections,
+          modifiers: g.modifiers.map((m: any) => ({
+            id: String(m.id),
+            modifierName: m.name,
+            price: m.price
+          }))
+        })));
+      }
     }).catch(() => {
       showToast("Gagal memuat data menu", "error");
       navigate("/merchant/menu");
     });
-  }, [id]);
+  }, [id, isEditMode, navigate, showToast]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      const uploadData = new FormData();
+      uploadData.append('image', file);
+      const res = await api.post('/upload', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setFormData(prev => ({ ...prev, imageUrl: res.data.url }));
+      showToast("Foto berhasil diunggah", "success");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      showToast(error.response?.data?.error || "Gagal mengunggah foto", "error");
+    }
   };
 
   const handleToggleAvailability = () => {
@@ -143,6 +172,7 @@ export default function MenuForm() {
         image: formData.imageUrl || null,
         categoryId: parseInt(formData.categoryId),
         status: formData.isAvailable ? "tersedia" : "habis",
+        modifierGroups: modifierGroups
       };
 
       if (isEditMode) {
@@ -215,6 +245,7 @@ export default function MenuForm() {
           categories={categories}
           handleInputChange={handleInputChange}
           handleToggleAvailability={handleToggleAvailability}
+          handleImageUpload={handleImageUpload}
           onNext={() => setActiveTab("addons")}
         />
       )}

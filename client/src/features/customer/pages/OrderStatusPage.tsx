@@ -16,14 +16,12 @@ import api from '@/lib/api';
 
 const OrderStatusPage: React.FC = () => {
 
-  const { tenantId, tableId, orderId } = useParams();
+  const { tenantId, tableToken, orderId } = useParams();
 
   const navigate = useNavigate();
 
-  const formattedTable =
-    tableId?.replace(/\D/g, '') || '-';
-
   // API STATE
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [order, setOrder] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
@@ -32,6 +30,11 @@ const OrderStatusPage: React.FC = () => {
 
   // ANIMATION
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // MENDAPATKAN NOMOR MEJA DARI DATA ORDER
+  const tableNumber = order?.table?.number 
+    ? (order.table.number.toLowerCase().includes('meja') ? order.table.number : `Meja ${order.table.number}`)
+    : '-';
 
   // SLIDE ANIMATION
   useEffect(() => {
@@ -53,8 +56,8 @@ const OrderStatusPage: React.FC = () => {
 
         setLoading(false);
 
-        // STOP polling jika DONE
-        if (res.data.status === 'DONE') {
+        // STOP polling jika PAID
+        if (res.data.status === 'PAID') {
           clearInterval(interval);
         }
 
@@ -112,7 +115,7 @@ const OrderStatusPage: React.FC = () => {
 
     setTimeout(() => {
 
-      navigate(`/m/${tenantId}/${tableId}`);
+      navigate(`/m/${tenantId}/${tableToken}`);
 
     }, 300);
   };
@@ -120,7 +123,7 @@ const OrderStatusPage: React.FC = () => {
   // STATUS COLOR
   const getStatusColor = (stepStatus: string) => {
 
-    const steps = ['PENDING', 'PROCESS', 'DONE'];
+    const steps = ['PENDING', 'PROCESS', 'READY', 'PAID'];
 
     const currentIndex = steps.indexOf(order?.status);
 
@@ -174,20 +177,20 @@ const OrderStatusPage: React.FC = () => {
             <div className="relative mt-8 px-6">
 
               {/* LINE */}
-              <div className="absolute top-6 left-[15%] right-[15%] h-1.5 bg-slate-100 -translate-y-1/2 z-0 rounded-full"></div>
-
-              {/* ACTIVE LINE */}
-              <div
-                className="absolute top-6 left-[15%] h-1.5 bg-brand-success -translate-y-1/2 z-0 transition-all duration-1000 rounded-full"
-                style={{
-                  width:
-                    order?.status === 'PENDING'
-                      ? '0%'
-                      : order?.status === 'PROCESS'
-                      ? '50%'
-                      : '70%'
-                }}
-              ></div>
+              <div className="absolute top-6 left-[15%] right-[15%] h-1.5 bg-slate-100 -translate-y-1/2 z-0 rounded-full overflow-hidden">
+                {/* ACTIVE LINE */}
+                <div
+                  className="absolute top-0 left-0 bottom-0 bg-brand-success transition-all duration-1000 rounded-full"
+                  style={{
+                    width:
+                      order?.status === 'PENDING'
+                        ? '0%'
+                        : order?.status === 'PROCESS'
+                        ? '50%'
+                        : '100%'
+                  }}
+                ></div>
+              </div>
 
               <div className="relative z-10 flex justify-between">
 
@@ -225,16 +228,16 @@ const OrderStatusPage: React.FC = () => {
 
                 </div>
 
-                {/* DONE */}
+                {/* PAID/READY (Selesai) */}
                 <div className="flex flex-col items-center gap-3">
 
-                  <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center transition-all duration-500 relative z-10 ${getStatusColor('DONE')}`}>
+                  <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center transition-all duration-500 relative z-10 ${getStatusColor(order?.status === 'PAID' ? 'PAID' : 'READY')}`}>
 
                     <CheckCircle2 className="w-6 h-6" />
 
                   </div>
 
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${order?.status === 'DONE' ? 'text-brand-success' : 'text-slate-600'}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${order?.status === 'READY' || order?.status === 'PAID' ? 'text-brand-success' : 'text-slate-600'}`}>
 
                     Selesai
 
@@ -255,16 +258,16 @@ const OrderStatusPage: React.FC = () => {
                 {order?.status === 'PROCESS' &&
                   'Pesanan sedang diproses'}
 
-                {order?.status === 'DONE' &&
+                {(order?.status === 'READY' || order?.status === 'PAID') &&
                   'Pesanan selesai, silakan ambil'}
 
               </p>
 
               <p className="text-xs text-slate-500 mt-1">
 
-                {order?.status === 'DONE'
-                  ? 'Silakan ambil di kasir.'
-                  : `Harap tunggu sebentar ya di Meja ${formattedTable}.`}
+                {(order?.status === 'READY' || order?.status === 'PAID')
+                  ? 'Silakan ambil pesanan Anda.'
+                  : `Harap tunggu sebentar ya di Meja ${tableNumber}.`}
 
               </p>
 
@@ -336,40 +339,61 @@ const OrderStatusPage: React.FC = () => {
             {/* ITEMS */}
             <div className="border-t border-dashed border-slate-200 pt-4 space-y-3">
 
-              {order?.items?.map((item: any, idx: number) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {order?.items?.map((item: any, idx: number) => {
+                let parsedToppings: any[] = [];
+                try {
+                  if (item.toppings) {
+                    parsedToppings = JSON.parse(item.toppings);
+                  }
+                } catch (e) {
+                  console.error("Error parsing toppings", e);
+                }
 
-                <div
-                  key={idx}
-                  className="flex justify-between text-sm"
-                >
+                return (
+                  <div
+                    key={idx}
+                    className="flex justify-between text-sm"
+                  >
 
-                  <div className="flex-1">
+                    <div className="flex-1">
 
-                    <p className="font-bold text-slate-700">
+                      <p className="font-bold text-slate-700">
 
-                      {item.quantity}x {item.product?.name}
-
-                    </p>
-
-                    {item.note && (
-
-                      <p className="text-[10px] text-slate-400 italic">
-
-                        Catatan: {item.note}
+                        {item.quantity}x {item.product?.name || "Produk dihapus"}
 
                       </p>
-                    )}
+                      
+                      {parsedToppings.length > 0 && (
+                        <div className="mt-1 space-y-0.5 pl-4">
+                          {parsedToppings.map((mod: any, mIdx: number) => (
+                            <p key={mIdx} className="text-xs text-slate-500">
+                              - {mod.name} {mod.price > 0 ? `(+Rp ${mod.price.toLocaleString('id-ID')})` : ''}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+
+                      {item.note && (
+
+                        <p className="text-[10px] text-slate-400 italic mt-1">
+
+                          Catatan: {item.note}
+
+                        </p>
+                      )}
+
+                    </div>
+
+                    <span className="font-bold text-slate-800">
+
+                      {formatRupiah(item.subtotal)}
+
+                    </span>
 
                   </div>
-
-                  <span className="font-bold text-slate-800">
-
-                    {formatRupiah(item.subtotal)}
-
-                  </span>
-
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* TOTAL */}

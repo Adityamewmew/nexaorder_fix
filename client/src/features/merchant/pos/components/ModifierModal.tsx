@@ -14,15 +14,15 @@ export default function ModifierModal({ product, isOpen, onClose, onConfirm }: M
   // Simpan state pilihan modifier: format { [groupId]: [modifierId1, modifierId2, ...] }
   const [selections, setSelections] = useState<Record<string, string[]>>(() => {
     const initial: Record<string, string[]> = {};
-    product.modifierGroups?.forEach(group => {
-      initial[group.id] = group.modifiers.filter(m => m.isDefault).map(m => m.id);
+    product.modifierGroups?.forEach((group: any) => {
+      initial[group.id] = group.modifiers.filter((m: any) => m.isDefault).map((m: any) => m.id);
     });
     return initial;
   });
 
   if (!isOpen) return null;
 
-  const handleToggleSelection = (group: ProductModifierGroup, modifierId: string) => {
+  const handleToggleSelection = (group: any, modifierId: string) => {
     setSelections(prev => {
       const currentSelections = prev[group.id] || [];
       const isSelected = currentSelections.includes(modifierId);
@@ -45,9 +45,9 @@ export default function ModifierModal({ product, isOpen, onClose, onConfirm }: M
 
   const calculateTotalPrice = () => {
     let total = product.price;
-    product.modifierGroups?.forEach(group => {
+    product.modifierGroups?.forEach((group: any) => {
       const selectedIds = selections[group.id] || [];
-      group.modifiers.forEach(mod => {
+      group.modifiers.forEach((mod: any) => {
         if (selectedIds.includes(mod.id)) {
           total += mod.price;
         }
@@ -58,7 +58,7 @@ export default function ModifierModal({ product, isOpen, onClose, onConfirm }: M
 
   const isFormValid = () => {
     if (!product.modifierGroups) return true;
-    return product.modifierGroups.every(group => {
+    return product.modifierGroups.every((group: any) => {
       if (!group.isRequired) return true;
       const count = (selections[group.id] || []).length;
       return count >= group.minSelections;
@@ -67,15 +67,15 @@ export default function ModifierModal({ product, isOpen, onClose, onConfirm }: M
 
   const handleConfirm = () => {
     const chosenModifiers: CartItemModifier[] = [];
-    product.modifierGroups?.forEach(group => {
+    product.modifierGroups?.forEach((group: any) => {
       const selectedIds = selections[group.id] || [];
-      group.modifiers.forEach(mod => {
+      group.modifiers.forEach((mod: any) => {
         if (selectedIds.includes(mod.id)) {
           chosenModifiers.push({
             groupId: group.id,
-            groupName: group.name,
+            groupName: group.groupName || group.name,
             modifierId: mod.id,
-            modifierName: mod.name,
+            modifierName: mod.modifierName || mod.name,
             price: mod.price
           });
         }
@@ -101,14 +101,14 @@ export default function ModifierModal({ product, isOpen, onClose, onConfirm }: M
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
-          {product.modifierGroups?.map((group) => {
+          {product.modifierGroups?.map((group: any) => {
             const selectedCount = (selections[group.id] || []).length;
             
             return (
               <div key={group.id} className="space-y-3">
                 <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
                   <div>
-                    <h4 className="font-bold text-slate-800">{group.name}</h4>
+                    <h4 className="font-bold text-slate-800">{group.groupName || group.name}</h4>
                     <p className="text-xs text-slate-500">
                       {group.isRequired ? "Wajib pilih" : "Opsional"} • 
                       {group.maxSelections === 1 ? " Pilih 1" : ` Pilih max ${group.maxSelections}`}
@@ -122,7 +122,7 @@ export default function ModifierModal({ product, isOpen, onClose, onConfirm }: M
                 </div>
 
                 <div className="space-y-2 px-1">
-                  {group.modifiers.map((mod) => {
+                  {group.modifiers.map((mod: any) => {
                     const isSelected = (selections[group.id] || []).includes(mod.id);
                     const isMaxReached = !isSelected && selectedCount >= group.maxSelections;
                     
@@ -147,15 +147,19 @@ export default function ModifierModal({ product, isOpen, onClose, onConfirm }: M
                             group.maxSelections === 1 ? "w-5 h-5 rounded-full" : "w-5 h-5 rounded-md",
                             isSelected ? "border-brand-primary bg-brand-primary text-white" : "border-slate-300 bg-white"
                           )}>
-                            {isSelected && <Check className="w-3.5 h-3.5" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
                           </div>
                           <span className={cn("font-medium text-sm", isSelected ? "text-brand-primary" : "text-slate-700")}>
-                            {mod.name}
+                            {mod.modifierName || mod.name}
                           </span>
                         </div>
-                        <span className="text-sm font-semibold text-slate-500">
-                          {mod.price > 0 ? `+ Rp ${mod.price.toLocaleString('id-ID')}` : 'Gratis'}
-                        </span>
+                        {mod.price > 0 ? (
+                          <span className={cn("text-sm font-semibold", isSelected ? "text-brand-primary" : "text-slate-500")}>
+                            +Rp {mod.price.toLocaleString('id-ID')}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium text-slate-400">Gratis</span>
+                        )}
                       </button>
                     );
                   })}
@@ -165,18 +169,17 @@ export default function ModifierModal({ product, isOpen, onClose, onConfirm }: M
           })}
         </div>
 
-        {/* Footer / Confirm Button */}
-        <div className="p-5 border-t border-slate-100 sticky bottom-0 bg-white rounded-b-2xl z-10 shrink-0">
+        {/* Footer */}
+        <div className="p-5 border-t border-slate-100 bg-white rounded-b-2xl sm:rounded-b-2xl shrink-0">
           <button
-            disabled={!isFormValid()}
             onClick={handleConfirm}
-            className="w-full bg-brand-secondary hover:bg-brand-secondaryHover disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-between px-6 transition-colors shadow-md"
+            disabled={!isFormValid()}
+            className="w-full bg-brand-secondary hover:bg-brand-secondaryHover disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-between"
           >
             <span>Simpan ke Keranjang</span>
-            <span>Rp. {calculateTotalPrice().toLocaleString('id-ID')}</span>
+            <span>Rp {calculateTotalPrice().toLocaleString('id-ID')}</span>
           </button>
         </div>
-
       </div>
     </div>
   );

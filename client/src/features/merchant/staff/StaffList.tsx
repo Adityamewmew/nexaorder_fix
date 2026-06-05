@@ -9,6 +9,7 @@ import api from "@/lib/api";
 interface Staff {
   id: number;
   username: string;
+  email: string | null;
   name: string;
   role: string;
   status: string;
@@ -38,7 +39,10 @@ export default function StaffList() {
     }
   };
 
-  useEffect(() => { fetchStaff(); }, []);
+  useEffect(() => { 
+    fetchStaff(); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const totalStaff = staff.length;
   const activeStaff = staff.filter(s => s.status === "aktif").length;
@@ -199,16 +203,22 @@ export default function StaffList() {
                 person.status === "aktif" ? "border-white" : "border-slate-300 filter grayscale"
               )}>
                 {person.photo ? (
-                  <img src={person.photo} alt={person.name} className="w-full h-full object-cover" />
+                  <img 
+                    src={person.photo.startsWith('http') ? person.photo : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + person.photo : `http://localhost:5000${person.photo}`)} 
+                    alt={person.name} 
+                    className="w-full h-full object-cover" 
+                  />
                 ) : (
                   <span className="text-2xl font-black text-brand-primary">{person.name.charAt(0).toUpperCase()}</span>
                 )}
               </div>
 
-              <h3 className={cn("text-lg font-bold mb-2", person.status === "aktif" ? "text-slate-800" : "text-slate-600")}>
+              <h3 className={cn("text-lg font-bold mb-1", person.status === "aktif" ? "text-slate-800" : "text-slate-600")}>
                 {person.name}
               </h3>
-              <p className="text-xs text-slate-400 mb-3">@{person.username}</p>
+              <p className="text-xs font-bold text-slate-500 mb-0.5">@{person.username}</p>
+              {person.email && <p className="text-xs text-slate-400 mb-3">{person.email}</p>}
+              {!person.email && <div className="mb-3"></div>}
 
               <div className="flex items-center gap-2 mb-6">
                 <span className="px-2 py-0.5 bg-red-50 text-red-500 text-[10px] font-bold rounded uppercase tracking-wider">

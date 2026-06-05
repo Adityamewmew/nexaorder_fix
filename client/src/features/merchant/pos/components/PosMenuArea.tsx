@@ -1,7 +1,7 @@
-import { Search, SlidersHorizontal, ChevronDown, UserCircle2, UtensilsCrossed, ShoppingBag, Plus } from "lucide-react";
+import { Search, UtensilsCrossed, ShoppingBag, Plus, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Product } from "@/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ModifierModal from "./ModifierModal";
 
 interface PosMenuAreaProps {
@@ -28,6 +28,12 @@ export default function PosMenuArea({
   onAddToCart
 }: PosMenuAreaProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleProductClick = (product: Product) => {
     if (product.stock === 0) return;
@@ -46,7 +52,7 @@ export default function PosMenuArea({
       {/* Top Bar POS (Dalam Menu) */}
       <div className="p-4 md:p-6 bg-white border-b border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between shrink-0">
         <div className="flex w-full md:w-auto items-center gap-3 flex-1">
-          <div className="relative flex-1 md:max-w-md">
+          <div className="relative flex-1 md:max-w-md w-full">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-slate-400" />
             </div>
@@ -58,16 +64,21 @@ export default function PosMenuArea({
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
             />
           </div>
-          <button className="p-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
-            <SlidersHorizontal className="w-5 h-5" />
-          </button>
         </div>
 
         <div className="flex w-full md:w-auto items-center gap-4 justify-between md:justify-end">
-          <div className="hidden md:flex items-center gap-2 text-slate-700 font-medium px-4 border-r border-slate-200">
-            <UserCircle2 className="w-6 h-6 text-slate-400" />
-            Kasir
-            <ChevronDown className="w-4 h-4 text-slate-400 ml-1" />
+          <div className="hidden md:flex items-center gap-3 text-slate-700 px-4 border-r border-slate-200 cursor-default">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-brand-primary">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold leading-none text-slate-800">
+                {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+              <span className="text-[10px] font-semibold text-slate-500 mt-1 uppercase tracking-wider">
+                {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' })}
+              </span>
+            </div>
           </div>
 
           <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
@@ -75,7 +86,7 @@ export default function PosMenuArea({
               onClick={() => setOrderType("Dine In")}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-md font-semibold text-sm transition-all",
-                orderType === "Dine In" ? "bg-white text-brand-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
+                orderType === "Dine In" ? "bg-white text-brand-primary border border-slate-200 shadow-sm" : "text-slate-500 hover:text-slate-700"
               )}
             >
               <UtensilsCrossed className="w-4 h-4" /> Dine In

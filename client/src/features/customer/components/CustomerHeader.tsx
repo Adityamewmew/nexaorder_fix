@@ -2,7 +2,7 @@ import React from 'react';
 import { ShoppingCart, Search } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 interface CustomerHeaderProps {
   tenantName: string;
@@ -10,10 +10,17 @@ interface CustomerHeaderProps {
 }
 
 const CustomerHeader: React.FC<CustomerHeaderProps> = ({ tenantName, onOpenSearch }) => {
-  const { tableId, tenantId, items } = useSelector((state: RootState) => state.customer);
+  const { tableId, tableName, tenantId, items } = useSelector((state: RootState) => state.customer);
+  const { tableToken } = useParams();
   
   const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
-  const formattedTable = tableId?.replace(/\D/g, '') || '-';
+  const formatTableName = (name: string | null, id: string | null) => {
+    if (!name) return `MEJA NO. ${id?.replace(/\D/g, '') || '-'}`;
+    if (name.toLowerCase().includes('meja')) return name.toUpperCase();
+    return `MEJA ${name.toUpperCase()}`;
+  };
+
+  const displayTable = formatTableName(tableName, tableId);
 
   return (
     <>
@@ -21,12 +28,12 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = ({ tenantName, onOpenSearc
       <div className="md:hidden bg-gradient-to-b from-[#0A3464] to-[#1469CA] rounded-b-3xl p-5 pb-6 shadow-md text-white">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-3xl font-black tracking-wide">MEJA NO. {formattedTable}</h1>
+            <h1 className="text-3xl font-black tracking-wide">{displayTable}</h1>
             <p className="text-sm text-blue-100 mt-1 font-medium">Selamat Datang di {tenantName}</p>
             <p className="text-xs text-blue-200 mt-0.5">Silahkan pilih menu keinginan anda</p>
           </div>
           
-          <Link to={`/m/${tenantId}/${tableId}/cart`} className="relative p-2 bg-white/10 rounded-full hover:bg-white/20 transition shrink-0">
+          <Link to={`/m/${tenantId}/${tableToken}/cart`} className="relative p-2 bg-white/10 rounded-full hover:bg-white/20 transition shrink-0">
             <ShoppingCart className="w-6 h-6" />
             {totalItems > 0 && (
               <span className="absolute -top-1 -right-1 bg-brand-secondary text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-brand-primary">
@@ -57,7 +64,7 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = ({ tenantName, onOpenSearc
       {/* DESKTOP HEADER (Clean) */}
       <div className="hidden md:flex justify-between items-end mb-8 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-5xl font-black text-brand-primary tracking-tight">MEJA NO. {formattedTable}</h1>
+          <h1 className="text-5xl font-black text-brand-primary tracking-tight">{displayTable}</h1>
           <p className="text-xl text-brand-primary/80 mt-2 font-semibold">Selamat Datang di {tenantName}</p>
         </div>
         

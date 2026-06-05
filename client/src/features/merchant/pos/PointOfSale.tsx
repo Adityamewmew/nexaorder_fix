@@ -21,6 +21,7 @@ interface ApiProduct {
   status: string;
   categoryId: number;
   category: { id: number; name: string };
+  modifierGroups?: any[];
 }
 
 function toProduct(p: ApiProduct): Product {
@@ -32,8 +33,20 @@ function toProduct(p: ApiProduct): Product {
     description: p.description || "",
     price: p.price,
     stock: p.stock,
-    imageUrl: p.image || "",
+    imageUrl: p.image?.startsWith('http') ? p.image : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + p.image : `http://localhost:5000${p.image}`),
     isAvailable: p.status === "tersedia" && p.stock > 0,
+    modifierGroups: p.modifierGroups ? p.modifierGroups.map(g => ({
+      id: String(g.id),
+      groupName: g.name,
+      isRequired: g.isRequired,
+      minSelections: g.minSelections,
+      maxSelections: g.maxSelections,
+      modifiers: g.modifiers.map((m: any) => ({
+        id: String(m.id),
+        modifierName: m.name,
+        price: m.price
+      }))
+    })) : []
   };
 }
 
@@ -79,8 +92,7 @@ export default function PointOfSale() {
   });
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-  const tax = subtotal * 0.1;
-  const total = subtotal + tax;
+  const total = subtotal;
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -101,6 +113,7 @@ export default function PointOfSale() {
           productId: parseInt(item.id.split("-")[0]),
           quantity: item.qty,
           note: item.notes || null,
+          toppings: item.modifiers && item.modifiers.length > 0 ? JSON.stringify(item.modifiers) : null
         })),
       });
 
@@ -160,7 +173,6 @@ export default function PointOfSale() {
         customerName={customerName}
         customerPhone={customerPhone}
         subtotal={subtotal}
-        tax={tax}
         total={total}
         onUpdateCustomerName={(name) => dispatch(setOrderInfo({ name }))}
         onUpdateCustomerPhone={(phone) => dispatch(setOrderInfo({ phone }))}

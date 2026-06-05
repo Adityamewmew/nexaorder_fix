@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { Store, ShieldCheck, Smartphone } from "lucide-react";
 
 // Auth
 import MerchantLogin from "@/features/merchant/MerchantLogin";
@@ -41,21 +42,64 @@ const MerchantIndexRedirect = () => {
   return <Navigate to="/merchant/dashboard" replace />;
 };
 
+const LandingPage = () => (
+  <div className="min-h-screen bg-brand-background flex flex-col items-center justify-center text-slate-800 p-6 relative overflow-hidden">
+    {/* Decorative background blobs */}
+    <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-brand-secondary/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div className="relative z-10 flex flex-col items-center max-w-2xl text-center w-full">
+      <div className="w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center mb-6">
+        <Store className="w-10 h-10 text-brand-primary" />
+      </div>
+      
+      <h1 className="text-5xl md:text-6xl font-black text-brand-primary mb-4 tracking-tight">
+        Nexa<span className="text-brand-secondary">Order</span>
+      </h1>
+      
+      <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-lg leading-relaxed font-medium">
+        Platform Self-Order & POS Modern untuk UMKM. Kelola meja, pesanan, dan menu dengan lebih efisien dalam satu ekosistem.
+      </p>
+
+      <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+        <Link 
+          to="/m/merchant/6b4995d9-ae4c-4c3c-aa47-eafa2c5e5344" 
+          className="flex items-center justify-center gap-3 px-8 py-4 bg-brand-success text-white rounded-xl font-bold hover:bg-green-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-1"
+        >
+          <Smartphone className="w-5 h-5" />
+          Demo Pelanggan
+        </Link>
+
+        <Link 
+          to="/merchant/login" 
+          className="flex items-center justify-center gap-3 px-8 py-4 bg-brand-secondary text-white rounded-xl font-bold hover:bg-brand-secondaryHover transition-all shadow-md hover:shadow-lg hover:-translate-y-1"
+        >
+          <Store className="w-5 h-5" />
+          Portal Merchant
+        </Link>
+
+        <Link 
+          to="/platform/login" 
+          className="flex items-center justify-center gap-3 px-8 py-4 bg-white text-slate-700 border-2 border-slate-200 rounded-xl font-bold hover:border-brand-primary hover:text-brand-primary transition-all shadow-sm hover:shadow-md hover:-translate-y-1"
+        >
+          <ShieldCheck className="w-5 h-5" />
+          Superadmin
+        </Link>
+      </div>
+      
+      <p className="mt-16 text-sm text-slate-400 font-medium">
+        &copy; {new Date().getFullYear()} Nexa Order. All rights reserved.
+      </p>
+    </div>
+  </div>
+);
+
 function App() {
   return (
     <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <Routes>
         {/* Home */}
-        <Route path="/" element={
-          <div className="min-h-screen bg-brand-background flex flex-col items-center justify-center text-slate-800">
-            <h1 className="text-4xl font-bold text-brand-primary mb-4">Nexa Order</h1>
-            <p className="text-slate-500 mb-8">Self-Order E-Commerce untuk UMKM</p>
-            <div className="flex gap-4">
-              <Link to="/platform/login" className="px-6 py-2 bg-brand-primary text-white rounded-lg font-medium hover:bg-brand-primary/90 transition">Login Platform</Link>
-              <Link to="/merchant/login" className="px-6 py-2 bg-brand-secondary text-white rounded-lg font-medium hover:bg-brand-secondary/90 transition">Login Merchant</Link>
-            </div>
-          </div>
-        } />
+        <Route path="/" element={<LandingPage />} />
 
         {/* Auth */}
         <Route path="/platform/login" element={<PlatformLogin />} />
@@ -114,7 +158,7 @@ function App() {
         </Route>
 
         {/* Customer (QR Code) — tugas Aditya */}
-        <Route path="/m/:tenantId/:tableId" element={<CustomerLayout />}>
+        <Route path="/m/:tenantId/:tableToken" element={<CustomerLayout />}>
           <Route index element={<MenuCatalogPage />} />
           <Route path="cart" element={<CartPage />} />
           <Route path="checkout" element={<CheckoutPage />} />

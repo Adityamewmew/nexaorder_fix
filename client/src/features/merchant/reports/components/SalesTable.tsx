@@ -24,17 +24,80 @@ interface SalesTableProps {
 
 export default function SalesTable({ data }: SalesTableProps) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const toggleRow = (id: string) => {
     if (expandedRow === id) setExpandedRow(null);
     else setExpandedRow(id);
   };
 
+  const handleExport = () => {
+    if (data.length === 0) return;
+
+    // Menyiapkan header
+    const headers = [
+      "No Pesanan",
+      "Tanggal",
+      "Total Item",
+      "Total Penjualan",
+      "Metode Pembayaran",
+      "Tipe Transaksi",
+      "No Meja",
+      "Status"
+    ];
+
+    // Mengkonversi data ke baris CSV
+    const csvData = data.map(row => [
+      row.id,
+      row.date,
+      row.itemsCount,
+      row.total,
+      row.payment,
+      row.type,
+      row.table,
+      row.status
+    ]);
+
+    // Menggabungkan header dan data
+    const csvContent = [
+      headers.join(","),
+      ...csvData.map(row => row.join(","))
+    ].join("\n");
+
+    // Membuat blob dan memicu download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Laporan_Penjualan_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Logika Pagination
+  const totalPages = Math.ceil(data.length / itemsPerPage);
+  const currentData = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      setExpandedRow(null);
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
       <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
         <h3 className="font-bold text-lg text-slate-800">Data Penjualan</h3>
-        <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 text-sm shadow-sm">
+        <button 
+          onClick={handleExport}
+          className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 text-sm shadow-sm"
+        >
           <Download className="w-4 h-4" />
           Export Data
         </button>
@@ -54,7 +117,7 @@ export default function SalesTable({ data }: SalesTableProps) {
             </tr>
           </thead>
           <tbody className="text-sm">
-            {data.map((row, index) => (
+            {currentData.length > 0 ? currentData.map((row, index) => (
               <React.Fragment key={row.id}>
                 {/* Main Row */}
                 <tr className={cn(
@@ -66,7 +129,7 @@ export default function SalesTable({ data }: SalesTableProps) {
                       <button onClick={() => toggleRow(row.id)} className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-400">
                         {expandedRow === row.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </button>
-                      {index + 1}
+                      {(currentPage - 1) * itemsPerPage + index + 1}
                     </div>
                   </td>
                   <td className="p-4 font-bold text-slate-800">{row.id}</td>
@@ -145,22 +208,52 @@ export default function SalesTable({ data }: SalesTableProps) {
                   </tr>
                 )}
               </React.Fragment>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan={7} className="p-8 text-center text-slate-400">
+                  Tidak ada data penjualan untuk rentang waktu ini.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination Dummy */}
-      <div className="p-4 border-t border-slate-100 flex justify-center items-center gap-2 text-sm bg-white">
-        <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600">&lt;|</button>
-        <button className="w-8 h-8 rounded-lg bg-brand-primary text-white font-bold">1</button>
-        <button className="w-8 h-8 rounded-lg hover:bg-slate-100 font-medium text-slate-600">2</button>
-        <button className="w-8 h-8 rounded-lg hover:bg-slate-100 font-medium text-slate-600">3</button>
-        <button className="w-8 h-8 rounded-lg hover:bg-slate-100 font-medium text-slate-600">4</button>
-        <span className="text-slate-400">...</span>
-        <button className="w-8 h-8 rounded-lg hover:bg-slate-100 font-medium text-slate-600">11</button>
-        <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600">|&gt;</button>
-      </div>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-slate-100 flex justify-center items-center gap-2 text-sm bg-white">
+          <button 
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 disabled:opacity-50"
+          >
+            &lt;
+          </button>
+          
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button 
+              key={page}
+              onClick={() => handlePageChange(page)}
+              className={cn(
+                "w-8 h-8 rounded-lg font-medium transition-colors",
+                currentPage === page 
+                  ? "bg-brand-primary text-white font-bold" 
+                  : "hover:bg-slate-100 text-slate-600"
+              )}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button 
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 disabled:opacity-50"
+          >
+            &gt;
+          </button>
+        </div>
+      )}
 
     </div>
   );

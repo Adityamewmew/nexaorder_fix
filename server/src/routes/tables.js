@@ -4,6 +4,22 @@ const { authMiddleware, adminOnly } = require('../middleware/auth')
 
 const router = express.Router()
 
+// GET /api/tables/validate/:token — publik (customer butuh ini untuk validasi token)
+router.get('/validate/:token', async (req, res) => {
+  try {
+    const table = await prisma.tableMeja.findUnique({
+      where: { token: req.params.token }
+    })
+    
+    if (!table) return res.status(404).json({ error: 'Meja tidak ditemukan' })
+    if (table.status !== 'aktif') return res.status(403).json({ error: 'Meja sedang tidak aktif' })
+      
+    res.json(table)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // GET /api/tables — publik (customer butuh ini untuk validasi tableId)
 router.get('/', async (req, res) => {
   try {

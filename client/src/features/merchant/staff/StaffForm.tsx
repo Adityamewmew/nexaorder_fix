@@ -11,14 +11,38 @@ export default function StaffForm() {
   const [formData, setFormData] = useState({
     username: "",
     name: "",
+    email: "",
     password: "",
     confirmPassword: "",
     role: "CASHIER",
-    isActive: true
+    isActive: true,
+    photoUrl: ""
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingImage(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('image', file);
+      const res = await api.post('/upload', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setFormData(prev => ({ ...prev, photoUrl: res.data.url }));
+      showToast("Foto profil berhasil diunggah", "success");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      showToast(error.response?.data?.error || "Gagal mengunggah foto profil", "error");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!formData.username.trim() || !formData.name.trim() || !formData.password) {
@@ -38,9 +62,11 @@ export default function StaffForm() {
     try {
       await api.post("/auth/register", {
         username: formData.username.trim(),
+        email: formData.email.trim() || null,
         name: formData.name.trim(),
         password: formData.password,
         role: formData.role,
+        photo: formData.photoUrl || null,
       });
       showToast("Akun kasir berhasil ditambahkan!", "success");
       navigate("/merchant/staff");
@@ -83,7 +109,7 @@ export default function StaffForm() {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder="Masukkan nama lengkap kasir"
+                placeholder="Masukkan nama lengkap kasir (Contoh: Budi Santoso)"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary focus:bg-white transition-colors"
               />
             </div>
@@ -94,7 +120,18 @@ export default function StaffForm() {
                 type="text"
                 value={formData.username}
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
-                placeholder="Masukkan username kasir"
+                placeholder="Masukkan username kasir (Contoh: budi123)"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary focus:bg-white transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-bold text-slate-800 mb-2 block">Email <span className="text-slate-400 font-normal text-xs">(Opsional)</span></label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                placeholder="Masukkan email kasir (Contoh: budi@gmail.com)"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary focus:bg-white transition-colors"
               />
             </div>
@@ -180,14 +217,40 @@ export default function StaffForm() {
 
             <div>
               <label className="text-sm font-bold text-slate-800 mb-2 block">Foto Profil Kasir</label>
-              <div className="w-full aspect-[2/1] border-2 border-dashed border-slate-300 bg-slate-50/50 rounded-2xl flex flex-col items-center justify-center p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer group">
-                <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <ImagePlus className="w-5 h-5 text-slate-400 group-hover:text-brand-secondary transition-colors" />
-                </div>
-                <h4 className="font-bold text-slate-700 text-sm mb-1">Upload Foto</h4>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider">
-                  Format: JPG, PNG (Max. 1MB)
-                </p>
+              <div className="w-full aspect-[2/1] border-2 border-dashed border-slate-300 bg-slate-50/50 rounded-2xl flex flex-col items-center justify-center p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer group relative overflow-hidden">
+                <input 
+                  type="file" 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                />
+                
+                {uploadingImage ? (
+                  <div className="flex flex-col items-center justify-center">
+                    <Loader2 className="w-8 h-8 text-brand-secondary animate-spin mb-2" />
+                    <span className="text-sm font-semibold text-slate-600">Mengunggah...</span>
+                  </div>
+                ) : formData.photoUrl ? (
+                  <div className="absolute inset-0 w-full h-full p-2">
+                    <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + formData.photoUrl : `http://localhost:5000${formData.photoUrl}`} alt="Preview" className="w-full h-full object-cover rounded-xl shadow-sm" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl m-2 z-0">
+                      <span className="text-white font-semibold text-sm flex items-center gap-2">
+                        <ImagePlus className="w-4 h-4" /> Ganti Foto
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <ImagePlus className="w-5 h-5 text-slate-400 group-hover:text-brand-secondary transition-colors" />
+                    </div>
+                    <h4 className="font-bold text-slate-700 text-sm mb-1">Upload Foto</h4>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                      Format: JPG, PNG (Max. 2MB)
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 

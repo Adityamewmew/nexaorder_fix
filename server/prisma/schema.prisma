@@ -39,6 +39,26 @@ model Product {
   orderItems  OrderItem[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  modifierGroups ModifierGroup[]
+}
+
+model ModifierGroup {
+  id            Int        @id @default(autoincrement())
+  name          String
+  isRequired    Boolean    @default(false)
+  minSelections Int        @default(0)
+  maxSelections Int        @default(1)
+  productId     Int
+  product       Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  modifiers     Modifier[]
+}
+
+model Modifier {
+  id              Int           @id @default(autoincrement())
+  name            String
+  price           Int           @default(0)
+  modifierGroupId Int
+  modifierGroup   ModifierGroup @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade)
 }
 
 model TableMeja {
@@ -46,13 +66,14 @@ model TableMeja {
   number String  @unique
   status String  @default("aktif")
   qrCode String?
+  token  String? @unique @default(uuid()) // Tambahkan token UUID untuk keamanan URL
   orders Order[]
 }
 
 model Order {
   id           Int         @id @default(autoincrement())
-  tableId      Int
-  table        TableMeja   @relation(fields: [tableId], references: [id])
+  tableId      Int?
+  table        TableMeja?   @relation(fields: [tableId], references: [id], onDelete: SetNull)
   customerName String?
   phone        String?
   total        Int         @default(0)
@@ -66,13 +87,13 @@ model Order {
 model OrderItem {
   id        Int     @id @default(autoincrement())
   orderId   Int
-  order     Order   @relation(fields: [orderId], references: [id])
-  productId Int
-  product   Product @relation(fields: [productId], references: [id])
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   quantity  Int
   note      String?
   subtotal  Int
-  toppings  String?
+  toppings  String? // Simpan data modifier dalam format JSON string
 }
 
 model Payment {
@@ -82,4 +103,16 @@ model Payment {
   method    String
   amount    Int
   createdAt DateTime @default(now())
+}
+
+model StoreProfile {
+  id          Int      @id @default(1)
+  name        String   @default("Nexa Order")
+  description String?
+  logo        String?
+  address     String?
+  phone       String?
+  openTime    String?  @default("08:00")
+  closeTime   String?  @default("22:00")
+  updatedAt   DateTime @updatedAt
 }
