@@ -4,10 +4,30 @@ const { sseEvents } = require('./sse');
 function startAutoCancelWorker() {
   console.log("Background worker started: checking for expired pending orders every minute.");
 
+  let checkCounter = 0;
+
   // Check every 60 seconds
   setInterval(async () => {
     try {
-      // 15 minutes ago
+      // 1. Run pruning of old CANCELLED orders once every hour (60 iterations)
+      checkCounter++;
+      if (checkCounter >= 60) {
+        checkCounter = 0;
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+        const pruned = await prisma.order.deleteMany({
+          where: {
+            status: 'CANCELLED',
+            createdAt: {
+              lt: threeDaysAgo
+            }
+          }
+        });
+        if (pruned.count > 0) {
+          console.log(`Worker: Cleaned up ${pruned.count} old CANCELLED orders from the database to save storage.`);
+        }
+      }
+
+      // 2. 15 minutes ago
       const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
 
       // Find all PENDING orders older than 15 minutes
