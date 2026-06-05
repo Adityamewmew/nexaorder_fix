@@ -84,7 +84,7 @@ export default function OrderList() {
     if (!token) return;
 
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    const sseUrl = `${baseUrl}/orders/stream?token=${token}`;
+    const sseUrl = `${baseUrl}/sse?token=${token}`;
     const eventSource = new EventSource(sseUrl);
 
     eventSource.onmessage = (event) => {

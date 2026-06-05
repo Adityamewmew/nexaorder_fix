@@ -54,7 +54,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().t
 
 // SSE Streaming Route for Real-Time Cashier Notifications
 const { sseHandler } = require('./sse')
-app.get('/api/orders/stream', sseHandler)
+app.get('/api/sse', sseHandler)
 
 // Start Background Worker for Order Auto-Cancel
 const { startAutoCancelWorker } = require('./worker')

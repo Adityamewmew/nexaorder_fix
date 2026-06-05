@@ -68,7 +68,7 @@ export default function MerchantLayout() {
     fetchPendingOrders();
 
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    const sseUrl = `${baseUrl}/orders/stream?token=${token}`;
+    const sseUrl = `${baseUrl}/sse?token=${token}`;
     const eventSource = new EventSource(sseUrl);
 
     eventSource.onmessage = (event) => {
@@ -86,6 +86,14 @@ export default function MerchantLayout() {
           setPendingOrdersCount(prev => prev + 1);
         } else if (payload.event === 'order-updated') {
           fetchPendingOrders();
+          
+          const order = payload.data;
+          if (order && order.status === 'PAID') {
+            playBeep();
+            showToast(`Pesanan #${order.id} telah dibayar!`, 'success');
+          } else if (order && order.status === 'CANCELLED') {
+            showToast(`Pesanan #${order.id} telah dibatalkan!`, 'warning');
+          }
         }
       } catch (err) {
         console.error("Error parsing SSE message in MerchantLayout:", err);

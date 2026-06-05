@@ -25,3 +25,4 @@ Thumbs.db
 # Uploads (file yang diupload user, bukan bagian kode)
 server/uploads/*
 !server/uploads/.gitkeep
+.vercel
