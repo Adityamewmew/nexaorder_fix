@@ -1,40 +1,49 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { Store, ShieldCheck, Smartphone } from "lucide-react";
 
 // Auth
-import MerchantLogin from "@/features/merchant/MerchantLogin";
 import ProtectedRoute from "@/components/ProtectedRoute";
+const MerchantLogin = lazy(() => import("@/features/merchant/MerchantLogin"));
 
 // Platform (Superadmin)
 import PlatformLayout from "@/layouts/PlatformLayout";
-import PlatformLogin from "@/features/platform/PlatformLogin";
-import PlatformDashboard from "@/features/platform/PlatformDashboard";
-import PlatformTenants from "@/features/platform/PlatformTenants";
+const PlatformLogin = lazy(() => import("@/features/platform/PlatformLogin"));
+const PlatformDashboard = lazy(() => import("@/features/platform/PlatformDashboard"));
+const PlatformTenants = lazy(() => import("@/features/platform/PlatformTenants"));
 
 // Merchant Layout
 import MerchantLayout from "@/layouts/MerchantLayout";
 
 // Merchant pages (dikerjakan Ravi)
-import MerchantDashboard from "@/features/merchant/MerchantDashboard";
-import PointOfSale from "@/features/merchant/pos/PointOfSale";
-import OrderList from "@/features/merchant/orders/OrderList";
-import MenuList from "@/features/merchant/menu/MenuList";
-import MenuForm from "@/features/merchant/menu/MenuForm";
-import TableList from "@/features/merchant/tables/TableList";
-import TableForm from "@/features/merchant/tables/TableForm";
-import StaffList from "@/features/merchant/staff/StaffList";
-import StaffForm from "@/features/merchant/staff/StaffForm";
-import SalesReport from "@/features/merchant/reports/SalesReport";
-import MerchantProfile from "@/features/merchant/profile/MerchantProfile";
+const MerchantDashboard = lazy(() => import("@/features/merchant/MerchantDashboard"));
+const PointOfSale = lazy(() => import("@/features/merchant/pos/PointOfSale"));
+const OrderList = lazy(() => import("@/features/merchant/orders/OrderList"));
+const MenuList = lazy(() => import("@/features/merchant/menu/MenuList"));
+const MenuForm = lazy(() => import("@/features/merchant/menu/MenuForm"));
+const TableList = lazy(() => import("@/features/merchant/tables/TableList"));
+const TableForm = lazy(() => import("@/features/merchant/tables/TableForm"));
+const StaffList = lazy(() => import("@/features/merchant/staff/StaffList"));
+const StaffForm = lazy(() => import("@/features/merchant/staff/StaffForm"));
+const SalesReport = lazy(() => import("@/features/merchant/reports/SalesReport"));
+const MerchantProfile = lazy(() => import("@/features/merchant/profile/MerchantProfile"));
 
 // Customer (dikerjakan Aditya)
 import CustomerLayout from "@/features/customer/layouts/CustomerLayout";
-import MenuCatalogPage from "@/features/customer/pages/MenuCatalogPage";
-import CartPage from "@/features/customer/pages/CartPage";
-import CheckoutPage from "@/features/customer/pages/CheckoutPage";
-import OrderStatusPage from "@/features/customer/pages/OrderStatusPage";
+const MenuCatalogPage = lazy(() => import("@/features/customer/pages/MenuCatalogPage"));
+const CartPage = lazy(() => import("@/features/customer/pages/CartPage"));
+const CheckoutPage = lazy(() => import("@/features/customer/pages/CheckoutPage"));
+const OrderStatusPage = lazy(() => import("@/features/customer/pages/OrderStatusPage"));
+
+// Sleek loading spinner for page transitions
+const PageLoader = () => (
+  <div className="min-h-screen bg-brand-background flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+    <div className="w-10 h-10 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mb-4"></div>
+    <p className="text-sm text-slate-500 font-bold tracking-wide">Memuat Halaman...</p>
+  </div>
+);
 
 const MerchantIndexRedirect = () => {
   const { user } = useSelector((state: RootState) => state.auth);
@@ -97,74 +106,76 @@ const LandingPage = () => (
 function App() {
   return (
     <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-      <Routes>
-        {/* Home */}
-        <Route path="/" element={<LandingPage />} />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Home */}
+          <Route path="/" element={<LandingPage />} />
 
-        {/* Auth */}
-        <Route path="/platform/login" element={<PlatformLogin />} />
-        <Route path="/merchant/login" element={<MerchantLogin />} />
+          {/* Auth */}
+          <Route path="/platform/login" element={<PlatformLogin />} />
+          <Route path="/merchant/login" element={<MerchantLogin />} />
 
-        {/* Platform (Superadmin) */}
-        <Route path="/platform" element={
-          <ProtectedRoute allowedRoles={['SUPERADMIN']}><PlatformLayout /></ProtectedRoute>
-        }>
-          <Route index element={<Navigate to="/platform/dashboard" replace />} />
-          <Route path="dashboard" element={<PlatformDashboard />} />
-          <Route path="tenants" element={<PlatformTenants />} />
-        </Route>
+          {/* Platform (Superadmin) */}
+          <Route path="/platform" element={
+            <ProtectedRoute allowedRoles={['SUPERADMIN']}><PlatformLayout /></ProtectedRoute>
+          }>
+            <Route index element={<Navigate to="/platform/dashboard" replace />} />
+            <Route path="dashboard" element={<PlatformDashboard />} />
+            <Route path="tenants" element={<PlatformTenants />} />
+          </Route>
 
-        {/* Merchant (Admin & Kasir) */}
-        <Route path="/merchant" element={
-          <ProtectedRoute allowedRoles={['MERCHANT_ADMIN', 'CASHIER']}><MerchantLayout /></ProtectedRoute>
-        }>
-          <Route index element={<MerchantIndexRedirect />} />
-          <Route path="dashboard" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><MerchantDashboard /></ProtectedRoute>
-          } />
-          <Route path="menu" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN', 'CASHIER']}><MenuList /></ProtectedRoute>
-          } />
-          <Route path="menu/add" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><MenuForm /></ProtectedRoute>
-          } />
-          <Route path="menu/edit/:id" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><MenuForm /></ProtectedRoute>
-          } />
-          <Route path="tables" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><TableList /></ProtectedRoute>
-          } />
-          <Route path="tables/add" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><TableForm /></ProtectedRoute>
-          } />
-          <Route path="staff" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><StaffList /></ProtectedRoute>
-          } />
-          <Route path="staff/add" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><StaffForm /></ProtectedRoute>
-          } />
-          <Route path="pos" element={
-            <ProtectedRoute allowedRoles={['CASHIER']}><PointOfSale /></ProtectedRoute>
-          } />
-          <Route path="orders" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN', 'CASHIER']}><OrderList /></ProtectedRoute>
-          } />
-          <Route path="reports" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN', 'CASHIER']}><SalesReport /></ProtectedRoute>
-          } />
-          <Route path="profile" element={
-            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN', 'CASHIER']}><MerchantProfile /></ProtectedRoute>
-          } />
-        </Route>
+          {/* Merchant (Admin & Kasir) */}
+          <Route path="/merchant" element={
+            <ProtectedRoute allowedRoles={['MERCHANT_ADMIN', 'CASHIER']}><MerchantLayout /></ProtectedRoute>
+          }>
+            <Route index element={<MerchantIndexRedirect />} />
+            <Route path="dashboard" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><MerchantDashboard /></ProtectedRoute>
+            } />
+            <Route path="menu" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN', 'CASHIER']}><MenuList /></ProtectedRoute>
+            } />
+            <Route path="menu/add" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><MenuForm /></ProtectedRoute>
+            } />
+            <Route path="menu/edit/:id" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><MenuForm /></ProtectedRoute>
+            } />
+            <Route path="tables" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><TableList /></ProtectedRoute>
+            } />
+            <Route path="tables/add" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><TableForm /></ProtectedRoute>
+            } />
+            <Route path="staff" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><StaffList /></ProtectedRoute>
+            } />
+            <Route path="staff/add" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN']}><StaffForm /></ProtectedRoute>
+            } />
+            <Route path="pos" element={
+              <ProtectedRoute allowedRoles={['CASHIER']}><PointOfSale /></ProtectedRoute>
+            } />
+            <Route path="orders" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN', 'CASHIER']}><OrderList /></ProtectedRoute>
+            } />
+            <Route path="reports" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN', 'CASHIER']}><SalesReport /></ProtectedRoute>
+            } />
+            <Route path="profile" element={
+              <ProtectedRoute allowedRoles={['MERCHANT_ADMIN', 'CASHIER']}><MerchantProfile /></ProtectedRoute>
+            } />
+          </Route>
 
-        {/* Customer (QR Code) — tugas Aditya */}
-        <Route path="/m/:tenantId/:tableToken" element={<CustomerLayout />}>
-          <Route index element={<MenuCatalogPage />} />
-          <Route path="cart" element={<CartPage />} />
-          <Route path="checkout" element={<CheckoutPage />} />
-          <Route path="status/:orderId" element={<OrderStatusPage />} />
-        </Route>
-      </Routes>
+          {/* Customer (QR Code) — tugas Aditya */}
+          <Route path="/m/:tenantId/:tableToken" element={<CustomerLayout />}>
+            <Route index element={<MenuCatalogPage />} />
+            <Route path="cart" element={<CartPage />} />
+            <Route path="checkout" element={<CheckoutPage />} />
+            <Route path="status/:orderId" element={<OrderStatusPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
