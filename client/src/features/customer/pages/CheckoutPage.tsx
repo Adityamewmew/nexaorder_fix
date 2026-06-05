@@ -97,25 +97,16 @@ const CheckoutPage: React.FC = () => {
 
       // CREATE ORDER
       const orderRes = await api.post('/orders', {
-
         tenantId,
-
         tableId: Number(tableId),
-
         customerName: name,
-
         customerPhone: phone,
-
         items: items.map((item) => ({
-
           productId: Number(
             item.id.toString().split('-')[0]
           ),
-
           quantity: item.qty,
-
           note: item.notes,
-          
           toppings: item.modifiers && item.modifiers.length > 0 ? JSON.stringify(item.modifiers) : null
         }))
       });
@@ -127,25 +118,61 @@ const CheckoutPage: React.FC = () => {
       dispatch(setCustomerOrderId(orderId));
 
       // CREATE PAYMENT
-      await api.post('/payments', {
-
+      const paymentRes = await api.post('/payments', {
         orderId,
-
         method: paymentMethod
       });
 
-      // SUCCESS SCREEN
-      setIsSuccess(true);
+      if (paymentMethod === 'QRIS') {
+        const snapToken = paymentRes.data.token;
+        if (!snapToken) {
+          throw new Error('Gagal mendapatkan token pembayaran dari server.');
+        }
 
-      // REDIRECT
-      setTimeout(() => {
-        // Pindahkan Clear Cart ke sini agar komponen tidak me-re-render terlalu cepat
-        dispatch(clearCustomerCart());
-        navigate(
-          `/m/${tenantId}/${tableToken}/status/${orderId}`,
-          { replace: true }
-        );
-      }, 2500);
+        const snap = (window as any).snap;
+        if (!snap) {
+          throw new Error('Midtrans Snap SDK tidak ditemukan. Silakan coba beberapa saat lagi.');
+        }
+
+        snap.pay(snapToken, {
+          onSuccess: function (result: any) {
+            console.log('Payment success:', result);
+            setIsSuccess(true);
+            setTimeout(() => {
+              dispatch(clearCustomerCart());
+              navigate(`/m/${tenantId}/${tableToken}/status/${orderId}`, { replace: true });
+            }, 2500);
+          },
+          onPending: function (result: any) {
+            console.log('Payment pending:', result);
+            dispatch(clearCustomerCart());
+            navigate(`/m/${tenantId}/${tableToken}/status/${orderId}`, { replace: true });
+          },
+          onError: function (result: any) {
+            console.error('Payment error:', result);
+            setError('Pembayaran gagal dilakukan.');
+            setIsProcessing(false);
+          },
+          onClose: function () {
+            console.log('Payment popup closed');
+            setError('Pembayaran dibatalkan.');
+            setIsProcessing(false);
+          }
+        });
+      } else {
+        // SUCCESS SCREEN
+        setIsSuccess(true);
+
+        // REDIRECT
+        setTimeout(() => {
+          // Pindahkan Clear Cart ke sini agar komponen tidak me-re-render terlalu cepat
+          dispatch(clearCustomerCart());
+          navigate(
+            `/m/${tenantId}/${tableToken}/status/${orderId}`,
+            { replace: true }
+          );
+        }, 2500);
+      }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
@@ -156,10 +183,12 @@ const CheckoutPage: React.FC = () => {
         err?.response?.data?.error ||
         'Checkout gagal'
       );
+      setIsProcessing(false);
 
     } finally {
-
-      setIsProcessing(false);
+      if (paymentMethod !== 'QRIS') {
+        setIsProcessing(false);
+      }
     }
   };
 

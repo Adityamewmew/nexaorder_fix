@@ -197,7 +197,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
 
           <div className="flex gap-3">
             {/* Tombol Utama berubah tergantung status dan pembayaran */}
-            {order.paymentMethod === 'UNPAID' ? (
+            {!order.payment ? (
               <button 
                 onClick={() => {
                   onProcessPayment(order.id, paymentMethod);

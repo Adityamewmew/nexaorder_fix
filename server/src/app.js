@@ -52,5 +52,14 @@ app.use('/api/upload', uploadRoutes)
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }))
 
+// SSE Streaming Route for Real-Time Cashier Notifications
+const { sseHandler } = require('./sse')
+app.get('/api/orders/stream', sseHandler)
+
+// Start Background Worker for Order Auto-Cancel
+const { startAutoCancelWorker } = require('./worker')
+startAutoCancelWorker()
+
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+

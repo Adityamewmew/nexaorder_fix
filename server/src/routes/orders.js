@@ -81,6 +81,10 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Emit new order to SSE clients
+    const { sseEvents } = require('../sse')
+    sseEvents.emit('new-order', order)
+
     res.status(201).json(order)
   } catch (e) {
     res.status(500).json({ error: e.message })
@@ -139,8 +143,18 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
     }
     const order = await prisma.order.update({
       where: { id: parseInt(req.params.id) },
-      data: { status }
+      data: { status },
+      include: {
+        items: { include: { product: true } },
+        table: true,
+        payment: true
+      }
     })
+
+    // Emit order update to SSE clients
+    const { sseEvents } = require('../sse')
+    sseEvents.emit('order-updated', order)
+
     res.json(order)
   } catch (e) {
     if (e.code === 'P2025') return res.status(404).json({ error: 'Pesanan tidak ditemukan' })

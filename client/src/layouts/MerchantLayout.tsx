@@ -11,8 +11,10 @@ import { logout } from "@/features/auth/authSlice";
 import { RootState } from "@/store";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import api from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 
 export default function MerchantLayout() {
+  const { showToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -25,31 +27,80 @@ export default function MerchantLayout() {
   
   const prevPendingCount = useRef(pendingOrdersCount);
 
-  // Fetch pending orders count
+  // Play a dynamic sound alarm using Web Audio API
+  const playBeep = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const playNote = (freq: number, duration: number, delay: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + delay + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + duration);
+      };
+      playNote(880, 0.15, 0);       // Double-beep
+      playNote(880, 0.15, 0.2);
+    } catch (e) {
+      console.error("Web Audio API not supported or blocked", e);
+    }
+  };
+
+  // Fetch pending orders count and set up SSE connection
   useEffect(() => {
+    const token = localStorage.getItem('nexa_token');
+    if (!token) return;
+
     const fetchPendingOrders = async () => {
       try {
         const res = await api.get('/orders?status=PENDING');
         setPendingOrdersCount(res.data.length);
+        prevPendingCount.current = res.data.length;
       } catch (err) {
         console.error("Gagal memuat jumlah antrian pesanan", err);
       }
     };
 
     fetchPendingOrders();
-    const interval = setInterval(fetchPendingOrders, 10000); // Polling every 10s
-    return () => clearInterval(interval);
-  }, []);
 
-  // Deteksi pesanan baru untuk memainkan suara
-  useEffect(() => {
-    if (pendingOrdersCount > prevPendingCount.current) {
-      // Play a simple notification sound when new order arrives
-      const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"); // Dummy short beep
-      audio.play().catch(() => console.log("Audio autoplay prevented by browser"));
-    }
-    prevPendingCount.current = pendingOrdersCount;
-  }, [pendingOrdersCount]);
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const sseUrl = `${baseUrl}/orders/stream?token=${token}`;
+    const eventSource = new EventSource(sseUrl);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.event === 'new-order') {
+          playBeep();
+
+          const order = payload.data;
+          const detailMsg = order.table 
+            ? `Pesanan baru #${order.id} dari Meja ${order.table.number}` 
+            : `Pesanan baru #${order.id} (Takeaway)`;
+          showToast(detailMsg, 'success');
+
+          setPendingOrdersCount(prev => prev + 1);
+        } else if (payload.event === 'order-updated') {
+          fetchPendingOrders();
+        }
+      } catch (err) {
+        console.error("Error parsing SSE message in MerchantLayout:", err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("SSE connection error in MerchantLayout, closing connection...", err);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
 
   // Menu Khusus Merchant Admin
   const adminMenu = [

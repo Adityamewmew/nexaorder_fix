@@ -79,11 +79,34 @@ export default function OrderList() {
 
   useEffect(() => {
     fetchOrders();
-    // Polling setiap 10 detik untuk pesanan baru
-    const interval = setInterval(fetchOrders, 10000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    const token = localStorage.getItem('nexa_token');
+    if (!token) return;
+
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const sseUrl = `${baseUrl}/orders/stream?token=${token}`;
+    const eventSource = new EventSource(sseUrl);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.event === 'new-order' || payload.event === 'order-updated') {
+          fetchOrders();
+        }
+      } catch (err) {
+        console.error("Error parsing SSE message in OrderList:", err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("SSE connection error in OrderList, closing...", err);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [fetchOrders]);
 
   const handleUpdateStatus = async (orderId: number, newStatus: string) => {
     try {
