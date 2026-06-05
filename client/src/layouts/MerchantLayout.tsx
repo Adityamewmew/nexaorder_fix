@@ -100,9 +100,9 @@ export default function MerchantLayout() {
       }
     };
 
-    eventSource.onerror = (err) => {
-      console.error("SSE connection error in MerchantLayout, closing connection...", err);
-      eventSource.close();
+    // Do NOT call eventSource.close() here — browser will auto-retry connection
+    eventSource.onerror = () => {
+      console.warn("SSE connection lost in MerchantLayout. Browser will auto-retry...");
     };
 
     return () => {

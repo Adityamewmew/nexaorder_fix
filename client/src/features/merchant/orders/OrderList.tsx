@@ -98,9 +98,9 @@ export default function OrderList() {
       }
     };
 
-    eventSource.onerror = (err) => {
-      console.error("SSE connection error in OrderList, closing...", err);
-      eventSource.close();
+    // Do NOT call eventSource.close() here — browser will auto-retry connection
+    eventSource.onerror = () => {
+      console.warn("SSE connection lost in OrderList. Browser will auto-retry...");
     };
 
     return () => {
