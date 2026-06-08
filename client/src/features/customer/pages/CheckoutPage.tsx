@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   Wallet,
   QrCode,
-  ShoppingBag
+  ShoppingBag,
+  Clock
 } from 'lucide-react';
 
 import { formatRupiah } from '@/lib/utils';
@@ -52,6 +53,50 @@ const CheckoutPage: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const [error, setError] = useState('');
+
+  // QR Payment state
+  const [qrData, setQrData] = useState<{ qrImageUrl: string; expiryTime: string; orderId: number } | null>(null);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Poll order status + countdown timer saat QR screen ditampilkan
+  useEffect(() => {
+    if (!qrData) return;
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await api.get(`/orders/${qrData.orderId}`);
+        if (res.data.status === 'PAID') {
+          clearInterval(pollingRef.current!);
+          clearInterval(countdownRef.current!);
+          setIsSuccess(true);
+          setTimeout(() => {
+            dispatch(clearCustomerCart());
+            navigate(`/m/${tenantId}/${tableToken}/status/${qrData.orderId}`, { replace: true });
+          }, 2500);
+        }
+      } catch (err) {
+        console.error('Polling order status error:', err);
+      }
+    }, 3000);
+
+    countdownRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrData]);
 
   // REDIRECT JIKA CART KOSONG
   if (items.length === 0 && !isSuccess) {
@@ -124,41 +169,16 @@ const CheckoutPage: React.FC = () => {
       });
 
       if (paymentMethod === 'QRIS') {
-        const snapToken = paymentRes.data.token;
-        if (!snapToken) {
-          throw new Error('Gagal mendapatkan token pembayaran dari server.');
+        const { qrImageUrl, expiryTime } = paymentRes.data;
+        if (!qrImageUrl) {
+          throw new Error('Gagal mendapatkan QR Code dari server.');
         }
 
-        const snap = (window as any).snap;
-        if (!snap) {
-          throw new Error('Midtrans Snap SDK tidak ditemukan. Silakan coba beberapa saat lagi.');
-        }
-
-        snap.pay(snapToken, {
-          onSuccess: function (result: any) {
-            console.log('Payment success:', result);
-            setIsSuccess(true);
-            setTimeout(() => {
-              dispatch(clearCustomerCart());
-              navigate(`/m/${tenantId}/${tableToken}/status/${orderId}`, { replace: true });
-            }, 2500);
-          },
-          onPending: function (result: any) {
-            console.log('Payment pending:', result);
-            dispatch(clearCustomerCart());
-            navigate(`/m/${tenantId}/${tableToken}/status/${orderId}`, { replace: true });
-          },
-          onError: function (result: any) {
-            console.error('Payment error:', result);
-            setError('Pembayaran gagal dilakukan.');
-            setIsProcessing(false);
-          },
-          onClose: function () {
-            console.log('Payment popup closed');
-            setError('Pembayaran dibatalkan.');
-            setIsProcessing(false);
-          }
-        });
+        // Hitung waktu tersisa dalam detik
+        const diffSec = Math.max(0, Math.floor((new Date(expiryTime).getTime() - Date.now()) / 1000));
+        setTimeLeft(diffSec);
+        setQrData({ qrImageUrl, expiryTime, orderId });
+        setIsProcessing(false);
       } else {
         // SUCCESS SCREEN
         setIsSuccess(true);
@@ -213,6 +233,72 @@ const CheckoutPage: React.FC = () => {
           Pesananmu sedang diteruskan ke dapur...
         </p>
 
+      </div>
+    );
+  }
+
+  // QR PAYMENT SCREEN
+  if (qrData) {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    const isExpired = timeLeft <= 0;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center p-5">
+        {/* Status badge */}
+        <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur text-white rounded-full px-4 py-1.5 text-sm font-medium mb-5 border border-white/10">
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          Menunggu Pembayaran QRIS
+        </div>
+
+        {/* Total amount */}
+        <p className="text-white/60 text-sm mb-1">Total Tagihan</p>
+        <p className="text-3xl font-black text-white mb-7">{formatRupiah(subtotal)}</p>
+
+        {/* QR Code Card */}
+        <div className="bg-white rounded-3xl p-5 shadow-2xl mb-5 w-full max-w-[280px]">
+          <img
+            src={qrData.qrImageUrl}
+            alt="QRIS Payment Code"
+            className="w-full aspect-square object-contain rounded-xl"
+          />
+          <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-slate-500 font-medium">
+            <QrCode className="w-3.5 h-3.5" />
+            <span>Scan dengan e-wallet apapun</span>
+          </div>
+        </div>
+
+        {/* Countdown */}
+        {!isExpired ? (
+          <div className="flex items-center gap-2 text-white/70 text-sm mb-4">
+            <Clock className="w-4 h-4" />
+            <span>
+              Berlaku:{' '}
+              <span className={`font-bold tabular-nums ${
+                timeLeft < 60 ? 'text-red-400' : 'text-white'
+              }`}>
+                {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+              </span>
+            </span>
+          </div>
+        ) : (
+          <div className="bg-red-500/20 border border-red-400/30 text-red-300 text-sm rounded-xl px-4 py-2.5 mb-4 font-medium text-center">
+            QR Code telah kadaluarsa. Silakan buat pesanan baru.
+          </div>
+        )}
+
+        {/* Supported wallets */}
+        <p className="text-white/40 text-xs text-center mb-8 leading-relaxed">
+          GoPay · Dana · OVO · ShopeePay · LinkAja<br />dan semua aplikasi yang mendukung QRIS
+        </p>
+
+        {/* Back to menu */}
+        <button
+          onClick={() => navigate(`/m/${tenantId}/${tableToken}`)}
+          className="text-white/40 hover:text-white/70 text-sm transition underline underline-offset-2"
+        >
+          Kembali ke Menu
+        </button>
       </div>
     );
   }

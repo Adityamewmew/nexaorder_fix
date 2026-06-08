@@ -23,17 +23,17 @@ router.post('/', async (req, res) => {
     if (!order) return res.status(404).json({ error: 'Pesanan tidak ditemukan' })
 
     if (method === 'QRIS') {
-      // Generate Midtrans Snap Transaction
+      // Generate QRIS charge via Midtrans Core API v2 (direct QR, no Snap popup)
       const serverKey = process.env.MIDTRANS_SERVER_KEY
       if (!serverKey) {
         throw new Error('MIDTRANS_SERVER_KEY tidak ditemukan di environment variables')
       }
       const authHeader = 'Basic ' + Buffer.from(serverKey + ':').toString('base64')
 
-      // Sandbox URL for Snap API
-      const midtransUrl = 'https://app.sandbox.midtrans.com/snap/v1/transactions'
-      
-      // We append a timestamp to the order_id so that retrying payments won't fail with a duplicate ID error in Midtrans Sandbox
+      // Core API v2 charge endpoint — berbeda dari Snap API
+      const midtransUrl = 'https://api.sandbox.midtrans.com/v2/charge'
+
+      // Append timestamp agar retrying tidak gagal karena duplicate order_id
       const midtransOrderId = `NEXA-${orderId}-${Date.now()}`
 
       const midtransRes = await fetch(midtransUrl, {
@@ -44,12 +44,13 @@ router.post('/', async (req, res) => {
           'Authorization': authHeader
         },
         body: JSON.stringify({
+          payment_type: 'qris',
           transaction_details: {
             order_id: midtransOrderId,
             gross_amount: order.total
           },
-          credit_card: {
-            secure: true
+          qris: {
+            acquirer: 'gopay'
           },
           customer_details: {
             first_name: order.customerName || 'Customer',
@@ -60,16 +61,21 @@ router.post('/', async (req, res) => {
 
       const midtransData = await midtransRes.json()
 
-      if (!midtransRes.ok || !midtransData.token) {
-        console.error('Midtrans API Error:', midtransData)
-        return res.status(500).json({ error: midtransData.error_messages ? midtransData.error_messages.join(', ') : 'Gagal membuat transaksi di Midtrans' })
+      if (!midtransRes.ok || !['200', '201'].includes(String(midtransData.status_code))) {
+        console.error('Midtrans Core API Error:', midtransData)
+        return res.status(500).json({ error: midtransData.status_message || 'Gagal membuat transaksi QRIS di Midtrans' })
       }
 
-      // We do not save a Payment record yet for QRIS because it is unpaid. 
-      // It will be created when the webhook notifies us of a successful payment.
+      // Extract QR image URL dari actions array Midtrans
+      const qrAction = midtransData.actions?.find(a => a.name === 'generate-qr-code')
+      const qrImageUrl = qrAction?.url || null
+
+      // Payment record belum disimpan — akan dibuat saat webhook konfirmasi pembayaran
       return res.status(201).json({
-        token: midtransData.token,
-        redirectUrl: midtransData.redirect_url
+        qrImageUrl,
+        qrString: midtransData.qr_string,
+        expiryTime: midtransData.expiry_time,
+        transactionId: midtransData.transaction_id
       })
     } else {
       // CASH payment method
