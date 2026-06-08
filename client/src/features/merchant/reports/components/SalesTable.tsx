@@ -196,7 +196,12 @@ export default function SalesTable({ data }: SalesTableProps) {
                             </div>
                             <div>
                               <p className="text-xs font-semibold text-slate-500 mb-1">Status</p>
-                              <span className="inline-block px-3 py-1 bg-green-50 border border-green-200 text-green-600 rounded-full font-bold text-xs">
+                              <span className={cn(
+                                "inline-block px-3 py-1 rounded-full font-bold text-xs border",
+                                row.status === 'Selesai' && "bg-green-50 border-green-200 text-green-600",
+                                row.status === 'Dibatalkan' && "bg-red-50 border-red-200 text-red-600",
+                                row.status !== 'Selesai' && row.status !== 'Dibatalkan' && "bg-slate-50 border-slate-200 text-slate-600"
+                              )}>
                                 {row.status}
                               </span>
                             </div>

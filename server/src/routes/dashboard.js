@@ -60,7 +60,7 @@ router.get('/', authMiddleware, async (req, res) => {
       prisma.product.count(),
       prisma.tableMeja.count(),
       prisma.user.count({ where: { role: 'CASHIER' } }),
-      prisma.order.count({ where: { createdAt: { gte: today } } }),
+      prisma.order.count({ where: { status: 'PAID', createdAt: { gte: today } } }),
       prisma.order.aggregate({
         where: { status: 'PAID', createdAt: { gte: today } },
         _sum: { total: true }
@@ -98,7 +98,11 @@ router.get('/sales', authMiddleware, async (req, res) => {
     const orders = await prisma.order.findMany({
       where,
       include: {
-        items: true,
+        items: {
+          include: {
+            product: true
+          }
+        },
         payment: true,
         table: true
       },

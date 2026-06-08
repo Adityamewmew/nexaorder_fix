@@ -132,7 +132,7 @@ export default function SalesReport() {
     })),
     type: order.table ? "Dine In" : "Take Away",
     table: order.table?.number || "-",
-    status: "Selesai",
+    status: order.status === 'PAID' ? 'Selesai' : order.status === 'CANCELLED' ? 'Dibatalkan' : order.status,
   }));
 
   return (
