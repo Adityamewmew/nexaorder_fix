@@ -11,14 +11,18 @@ const router = express.Router()
 router.post('/', async (req, res) => {
   try {
     const { tableId, items, customerName, phone } = req.body
-    if (!tableId || !items || items.length === 0) {
-      return res.status(400).json({ error: 'tableId dan items wajib' })
+    if (!items || items.length === 0) {
+      return res.status(400).json({ error: 'items wajib diisi' })
     }
 
-    // Pastikan tableId valid
-    const table = await prisma.tableMeja.findUnique({ where: { id: parseInt(tableId) } })
-    if (!table) {
-      return res.status(400).json({ error: 'Meja tidak ditemukan' })
+    let parsedTableId = null
+    if (tableId) {
+      parsedTableId = parseInt(tableId)
+      // Pastikan tableId valid
+      const table = await prisma.tableMeja.findUnique({ where: { id: parsedTableId } })
+      if (!table) {
+        return res.status(400).json({ error: 'Meja tidak ditemukan' })
+      }
     }
 
     let total = 0
@@ -54,7 +58,7 @@ router.post('/', async (req, res) => {
 
     const order = await prisma.order.create({
       data: {
-        tableId: parseInt(tableId),
+        tableId: parsedTableId,
         customerName: customerName || null,
         phone: phone || null,
         total,
@@ -137,19 +141,49 @@ router.get('/', authMiddleware, async (req, res) => {
 router.patch('/:id/status', authMiddleware, async (req, res) => {
   try {
     const { status } = req.body
-    const validStatuses = ['PENDING', 'PROCESS', 'READY', 'PAID']
+    const validStatuses = ['PENDING', 'PROCESS', 'READY', 'PAID', 'CANCELLED']
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Status tidak valid. Gunakan: PENDING, PROCESS, READY, atau PAID' })
+      return res.status(400).json({ error: 'Status tidak valid. Gunakan: PENDING, PROCESS, READY, PAID, atau CANCELLED' })
     }
-    const order = await prisma.order.update({
-      where: { id: parseInt(req.params.id) },
-      data: { status },
-      include: {
-        items: { include: { product: true } },
-        table: true,
-        payment: true
-      }
-    })
+
+    let order
+    if (status === 'CANCELLED') {
+      order = await prisma.$transaction(async (tx) => {
+        const updated = await tx.order.update({
+          where: { id: parseInt(req.params.id) },
+          data: { status: 'CANCELLED' },
+          include: {
+            items: { include: { product: true } },
+            table: true,
+            payment: true
+          }
+        })
+
+        // Restore stocks
+        for (const item of updated.items) {
+          if (item.productId) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: {
+                stock: { increment: item.quantity },
+                status: 'tersedia'
+              }
+            })
+          }
+        }
+        return updated
+      })
+    } else {
+      order = await prisma.order.update({
+        where: { id: parseInt(req.params.id) },
+        data: { status },
+        include: {
+          items: { include: { product: true } },
+          table: true,
+          payment: true
+        }
+      })
+    }
 
     // Emit order update to SSE clients
     const { sseEvents } = require('../sse')

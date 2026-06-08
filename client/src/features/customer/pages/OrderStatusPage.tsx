@@ -267,7 +267,7 @@ const OrderStatusPage: React.FC = () => {
 
                 {(order?.status === 'READY' || order?.status === 'PAID')
                   ? 'Silakan ambil pesanan Anda.'
-                  : `Harap tunggu sebentar ya di Meja ${tableNumber}.`}
+                  : 'Harap tunggu dulu ya.'}
 
               </p>
 

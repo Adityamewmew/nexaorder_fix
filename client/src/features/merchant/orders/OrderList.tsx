@@ -264,7 +264,7 @@ export default function OrderList() {
           onUpdateStatus={(id, status) => handleUpdateStatus(Number(id), status as any)}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onProcessPayment={(id, method) => {
-            api.post('/payments', { orderId: Number(id), method })
+            api.post('/payments', { orderId: Number(id), method, isManual: true })
               .then(() => {
                 showToast("Pembayaran berhasil dicatat", "success");
                 fetchOrders();

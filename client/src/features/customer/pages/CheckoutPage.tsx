@@ -48,6 +48,9 @@ const CheckoutPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] =
     useState<'QRIS' | 'CASH'>('QRIS');
 
+  const [orderType, setOrderType] =
+    useState<'DINE_IN' | 'TAKE_AWAY'>(tableId ? 'DINE_IN' : 'TAKE_AWAY');
+
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [isSuccess, setIsSuccess] = useState(false);
@@ -143,7 +146,7 @@ const CheckoutPage: React.FC = () => {
       // CREATE ORDER
       const orderRes = await api.post('/orders', {
         tenantId,
-        tableId: Number(tableId),
+        tableId: orderType === 'DINE_IN' ? Number(tableId) : null,
         customerName: name,
         customerPhone: phone,
         items: items.map((item) => ({
@@ -399,6 +402,44 @@ const CheckoutPage: React.FC = () => {
 
               </div>
             </div>
+          </div>
+
+          {/* TIPE ORDER */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <h2 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-brand-primary" />
+              Tipe Pesanan
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setOrderType('DINE_IN')}
+                disabled={!tableId}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all gap-1.5 ${
+                  orderType === 'DINE_IN'
+                    ? 'border-brand-primary bg-brand-primary/5 text-brand-primary font-bold'
+                    : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'
+                } ${!tableId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <span className="text-sm">Dine In (Makan Sini)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderType('TAKE_AWAY')}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all gap-1.5 cursor-pointer ${
+                  orderType === 'TAKE_AWAY'
+                    ? 'border-brand-primary bg-brand-primary/5 text-brand-primary font-bold'
+                    : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'
+                }`}
+              >
+                <span className="text-sm">Take Away (Bungkus)</span>
+              </button>
+            </div>
+            {!tableId && (
+              <p className="text-[10px] text-amber-600 mt-2 italic font-medium">
+                * Makan di tempat tidak tersedia karena Anda tidak memindai QR meja.
+              </p>
+            )}
           </div>
 
           {/* PAYMENT METHOD */}

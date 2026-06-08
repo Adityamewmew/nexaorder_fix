@@ -39,12 +39,14 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
                 order.status === 'PENDING' && "bg-amber-100 text-amber-700",
                 order.status === 'PROCESS' && "bg-blue-100 text-blue-700",
                 order.status === 'READY' && "bg-emerald-100 text-emerald-700",
-                order.status === 'PAID' && "bg-slate-200 text-slate-700"
+                order.status === 'PAID' && "bg-slate-200 text-slate-700",
+                order.status === 'CANCELLED' && "bg-red-100 text-red-700"
               )}>
                 {order.status === 'PENDING' && "Menunggu"}
                 {order.status === 'PROCESS' && "Diproses"}
                 {order.status === 'READY' && "Siap"}
                 {order.status === 'PAID' && "Selesai"}
+                {order.status === 'CANCELLED' && "Dibatalkan"}
               </span>
             </div>
             <div className="flex items-center gap-4 text-sm text-slate-500">
@@ -196,6 +198,22 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
           </div>
 
           <div className="flex gap-3">
+            {/* Tombol Cancel Order jika belum PAID atau CANCELLED */}
+            {order.status !== 'PAID' && order.status !== 'CANCELLED' && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Apakah Anda yakin ingin membatalkan pesanan #${order.id}?`)) {
+                    onUpdateStatus(order.id, 'CANCELLED');
+                    onClose();
+                  }
+                }}
+                className="px-5 bg-red-100 hover:bg-red-200 text-red-700 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors text-sm shadow-sm"
+              >
+                Batalkan
+              </button>
+            )}
+
             {/* Tombol Utama berubah tergantung status dan pembayaran */}
             {!order.payment ? (
               <button 

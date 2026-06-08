@@ -28,8 +28,8 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = ({ tenantName, onOpenSearc
       <div className="md:hidden bg-gradient-to-b from-[#0A3464] to-[#1469CA] rounded-b-3xl p-5 pb-6 shadow-md text-white">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-3xl font-black tracking-wide">{displayTable}</h1>
-            <p className="text-sm text-blue-100 mt-1 font-medium">Selamat Datang di {tenantName}</p>
+            <h1 className="text-3xl font-black tracking-wide">{tenantName}</h1>
+            <p className="text-sm text-blue-100 mt-1 font-medium">{displayTable}</p>
             <p className="text-xs text-blue-200 mt-0.5">Silahkan pilih menu keinginan anda</p>
           </div>
           
@@ -64,8 +64,8 @@ const CustomerHeader: React.FC<CustomerHeaderProps> = ({ tenantName, onOpenSearc
       {/* DESKTOP HEADER (Clean) */}
       <div className="hidden md:flex justify-between items-end mb-8 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-5xl font-black text-brand-primary tracking-tight">{displayTable}</h1>
-          <p className="text-xl text-brand-primary/80 mt-2 font-semibold">Selamat Datang di {tenantName}</p>
+          <h1 className="text-5xl font-black text-brand-primary tracking-tight">{tenantName}</h1>
+          <p className="text-xl text-brand-primary/80 mt-2 font-semibold">{displayTable}</p>
         </div>
         
         <div className="relative w-72" onClick={onOpenSearch}>

@@ -72,7 +72,7 @@ const LandingPage = () => (
 
       <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
         <Link 
-          to="/m/merchant/6b4995d9-ae4c-4c3c-aa47-eafa2c5e5344" 
+          to="/m/merchant/9867f9ed-09a6-476e-a242-5275d401fa6b" 
           className="flex items-center justify-center gap-3 px-8 py-4 bg-brand-success text-white rounded-xl font-bold hover:bg-green-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-1"
         >
           <Smartphone className="w-5 h-5" />

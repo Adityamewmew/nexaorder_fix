@@ -23,6 +23,17 @@ router.post('/', async (req, res) => {
     if (!order) return res.status(404).json({ error: 'Pesanan tidak ditemukan' })
 
     if (method === 'QRIS') {
+      if (req.body.isManual) {
+        const payment = await prisma.payment.create({
+          data: {
+            orderId: parseInt(orderId),
+            method: 'QRIS',
+            amount: order.total
+          }
+        })
+        return res.status(201).json(payment)
+      }
+
       // Generate QRIS charge via Midtrans Core API v2 (direct QR, no Snap popup)
       const serverKey = process.env.MIDTRANS_SERVER_KEY
       if (!serverKey) {
