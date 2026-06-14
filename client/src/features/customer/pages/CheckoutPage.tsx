@@ -303,6 +303,9 @@ const CheckoutPage: React.FC = () => {
               setIsSimulating(true);
               try {
                 await api.post('/payments/dev-simulate', { orderId: qrData.orderId });
+                // Pembayaran tervalidasi → redirect ke status page untuk pantau antrean
+                dispatch(clearCustomerCart());
+                navigate(`/m/${tenantId}/${tableToken}/status/${qrData.orderId}`, { replace: true });
               } catch (err) {
                 console.error('Simulasi gagal:', err);
                 setIsSimulating(false);
