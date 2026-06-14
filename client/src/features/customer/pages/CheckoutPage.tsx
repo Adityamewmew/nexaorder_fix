@@ -60,6 +60,7 @@ const CheckoutPage: React.FC = () => {
   // QR Payment state
   const [qrData, setQrData] = useState<{ qrImageUrl: string; expiryTime: string; orderId: number } | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [isSimulating, setIsSimulating] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -291,9 +292,33 @@ const CheckoutPage: React.FC = () => {
         )}
 
         {/* Supported wallets */}
-        <p className="text-white/40 text-xs text-center mb-8 leading-relaxed">
+        <p className="text-white/40 text-xs text-center mb-6 leading-relaxed">
           GoPay · Dana · OVO · ShopeePay · LinkAja<br />dan semua aplikasi yang mendukung QRIS
         </p>
+
+        {/* DEV ONLY: Tombol simulasi pembayaran untuk testing */}
+        {import.meta.env.DEV && qrData && (
+          <button
+            onClick={async () => {
+              setIsSimulating(true);
+              try {
+                await api.post('/payments/dev-simulate', { orderId: qrData.orderId });
+              } catch (err) {
+                console.error('[DEV] Simulasi gagal:', err);
+                setIsSimulating(false);
+              }
+            }}
+            disabled={isSimulating}
+            className="mb-4 px-6 py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-900 text-sm font-black rounded-xl transition-all active:scale-95 flex items-center gap-2 shadow-lg"
+          >
+            {isSimulating ? (
+              <div className="w-4 h-4 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
+            ) : (
+              '⚡'
+            )}
+            {isSimulating ? 'Memproses...' : '[DEV] Simulasi Bayar'}
+          </button>
+        )}
 
         {/* Back to menu */}
         <button

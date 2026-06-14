@@ -208,4 +208,52 @@ router.post('/midtrans-webhook', async (req, res) => {
   }
 })
 
+// POST /api/payments/dev-simulate — simulasi pembayaran QRIS untuk development/testing
+// ⚠️ Endpoint ini hanya untuk keperluan testing. Jangan digunakan di production.
+router.post('/dev-simulate', async (req, res) => {
+  try {
+    const { orderId } = req.body
+    if (!orderId) {
+      return res.status(400).json({ error: 'orderId wajib diisi' })
+    }
+
+    const order = await prisma.order.update({
+      where: { id: parseInt(orderId) },
+      data: { status: 'PAID' },
+      include: {
+        items: { include: { product: true } },
+        table: true,
+        payment: true
+      }
+    })
+
+    // Buat payment record jika belum ada
+    const existingPayment = await prisma.payment.findUnique({
+      where: { orderId: parseInt(orderId) }
+    })
+
+    if (!existingPayment) {
+      await prisma.payment.create({
+        data: {
+          orderId: parseInt(orderId),
+          method: 'QRIS',
+          amount: order.total
+        }
+      })
+    }
+
+    // Kirim SSE ke merchant seperti webhook asli
+    sseEvents.emit('order-updated', order)
+
+    console.log(`[DEV] Simulasi pembayaran berhasil untuk order #${orderId}`)
+    return res.status(200).json({ status: 'ok', message: `Order #${orderId} berhasil disimulasikan sebagai PAID` })
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Pesanan tidak ditemukan' })
+    }
+    console.error('[DEV] Simulasi pembayaran gagal:', error)
+    return res.status(500).json({ error: error.message })
+  }
+})
+
 module.exports = router
