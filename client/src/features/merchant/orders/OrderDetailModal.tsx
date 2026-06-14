@@ -1,7 +1,6 @@
-import { X, Printer, CheckCircle2, ChefHat, ShoppingBag, UtensilsCrossed, CreditCard, QrCode, Banknote } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { X, Printer, CheckCircle2, ChefHat, ShoppingBag, UtensilsCrossed, QrCode, Banknote } from "lucide-react";
 import api from "@/lib/api";
+
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface OrderDetailModalProps {
@@ -14,7 +13,6 @@ interface OrderDetailModalProps {
 }
 
 export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatus, onProcessPayment }: OrderDetailModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "QRIS" | "TRANSFER">("CASH");
 
   if (!isOpen || !order) return null;
 
@@ -295,37 +293,43 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
             })}
           </div>
 
-          {/* Bagian Validasi Pembayaran (Hanya muncul jika belum lunas) */}
-          {!order.payment && (
-            <div className="mt-8 p-5 bg-brand-primary/5 border border-brand-primary/20 rounded-xl">
-              <h3 className="font-bold text-brand-primary mb-3 flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
-                Pilih Metode Pembayaran
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setPaymentMethod("CASH")}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2",
-                    paymentMethod === "CASH" ? "border-brand-primary bg-white shadow-sm" : "border-transparent bg-white/50 hover:bg-white"
-                  )}
-                >
-                  <Banknote className={cn("w-6 h-6", paymentMethod === "CASH" ? "text-brand-primary" : "text-slate-400")} />
-                  <span className={cn("text-sm font-bold", paymentMethod === "CASH" ? "text-brand-primary" : "text-slate-500")}>Tunai (Kasir)</span>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod("QRIS")}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all gap-2",
-                    paymentMethod === "QRIS" ? "border-brand-primary bg-white shadow-sm" : "border-transparent bg-white/50 hover:bg-white"
-                  )}
-                >
-                  <QrCode className={cn("w-6 h-6", paymentMethod === "QRIS" ? "text-brand-primary" : "text-slate-400")} />
-                  <span className={cn("text-sm font-bold", paymentMethod === "QRIS" ? "text-brand-primary" : "text-slate-500")}>QRIS</span>
-                </button>
+          {/* Informasi Pembayaran / Banner Status */}
+          {order.payment?.method === 'QRIS' && order.payment?.amount === 0 ? (
+            /* QRIS BELUM DIBAYAR → Terkunci */
+            <div className="mt-8 p-5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <QrCode className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-bold text-amber-800 text-base">Menunggu Pembayaran QRIS</p>
+                <p className="text-sm text-amber-600 mt-0.5">Pesanan terkunci sampai customer menyelesaikan pembayaran QRIS.</p>
               </div>
             </div>
-          )}
+          ) : order.payment?.method === 'CASH' && order.status === 'READY' ? (
+            /* CASH SIAP → Banner validasi pembayaran di akhir */
+            <div className="mt-8 p-5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                <Banknote className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="font-bold text-emerald-800 text-base">Pesanan Siap — Tagih Pembayaran</p>
+                <p className="text-sm text-emerald-600 mt-0.5">Klik tombol di bawah setelah cash diterima dari customer.</p>
+              </div>
+            </div>
+          ) : order.payment ? (
+            /* Ada payment — tampilkan metode */
+            <div className="mt-8 p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center gap-3">
+              {order.payment.method === 'QRIS' ? (
+                <QrCode className="w-5 h-5 text-brand-primary" />
+              ) : (
+                <Banknote className="w-5 h-5 text-emerald-600" />
+              )}
+              <span className="text-sm font-semibold text-slate-700">
+                Metode Bayar: <span className="text-brand-primary">{order.payment.method}</span>
+                {order.payment.method === 'CASH' && <span className="text-slate-400 ml-1">(dibayar di akhir)</span>}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {/* Footer / Ringkasan Harga & Tombol Aksi */}
@@ -362,22 +366,15 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
               </button>
             )}
 
-            {/* Tombol Utama berubah tergantung status dan pembayaran */}
-            {!order.payment ? (
-              <button 
-                onClick={() => {
-                  onProcessPayment(order.id, paymentMethod);
-                  // Jika di status PENDING, bisa langsung kita majukan ke PROCESS setelah bayar
-                  if (order.status === 'PENDING') onUpdateStatus(order.id, 'PROCESS');
-                  onClose();
-                }}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
-              >
-                <CheckCircle2 className="w-5 h-5" />
-                Validasi Pembayaran ({paymentMethod})
-              </button>
+            {/* Tombol Utama — bergantung status & metode pembayaran */}
+            {order.payment?.method === 'QRIS' && order.payment?.amount === 0 ? (
+              /* QRIS belum dibayar → terkunci, tidak ada action */
+              <div className="flex-1 bg-amber-50 border-2 border-amber-200 text-amber-600 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-base">
+                <QrCode className="w-5 h-5" />
+                Menunggu Pembayaran QRIS...
+              </div>
             ) : order.status === 'PENDING' ? (
-              <button 
+              <button
                 onClick={() => { onUpdateStatus(order.id, 'PROCESS'); onClose(); }}
                 className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
               >
@@ -385,15 +382,29 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
                 Mulai Masak
               </button>
             ) : order.status === 'PROCESS' ? (
-              <button 
+              <button
                 onClick={() => { onUpdateStatus(order.id, 'READY'); onClose(); }}
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
               >
                 <CheckCircle2 className="w-5 h-5" />
                 Pesanan Siap
               </button>
+            ) : order.status === 'READY' && order.payment?.method === 'CASH' ? (
+              /* CASH di akhir → validasi pembayaran tunai */
+              <button
+                onClick={() => {
+                  onProcessPayment(order.id, 'CASH');
+                  onUpdateStatus(order.id, 'PAID');
+                  onClose();
+                }}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
+              >
+                <CheckCircle2 className="w-5 h-5" />
+                Validasi Pembayaran (CASH)
+              </button>
             ) : order.status === 'READY' ? (
-              <button 
+              /* QRIS atau method lain di READY → selesaikan */
+              <button
                 onClick={() => { onUpdateStatus(order.id, 'PAID'); onClose(); }}
                 className="flex-1 bg-brand-primary hover:bg-brand-primaryHover text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm text-lg"
               >
@@ -401,7 +412,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
                 Selesaikan Pesanan
               </button>
             ) : (
-              <button 
+              <button
                 onClick={onClose}
                 className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors"
               >
@@ -414,4 +425,4 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
       </div>
     </div>
   );
-}
+}

@@ -81,16 +81,33 @@ router.post('/', async (req, res) => {
       const qrAction = midtransData.actions?.find(a => a.name === 'generate-qr-code')
       const qrImageUrl = qrAction?.url || null
 
-      // Payment record belum disimpan — akan dibuat saat webhook konfirmasi pembayaran
+      // Buat payment record dengan amount=0 sebagai marker "QRIS menunggu pembayaran"
+      // amount akan di-update ke nilai sebenarnya ketika pembayaran dikonfirmasi
+      await prisma.payment.upsert({
+        where: { orderId: parseInt(orderId) },
+        create: { orderId: parseInt(orderId), method: 'QRIS', amount: 0 },
+        update: { method: 'QRIS', amount: 0 }
+      })
+
+      // Ambil order lengkap dengan payment untuk dikirim ke merchant
+      const orderWithPayment = await prisma.order.findUnique({
+        where: { id: parseInt(orderId) },
+        include: { items: { include: { product: true } }, table: true, payment: true }
+      })
+
+      // Notifikasi merchant — pesanan masuk tapi terkunci (QRIS belum dibayar)
+      sseEvents.emit('new-order', orderWithPayment)
+
       return res.status(201).json({
         qrImageUrl,
         qrString: midtransData.qr_string,
         expiryTime: midtransData.expiry_time,
-        transactionId: midtransData.transaction_id
+        transactionId: midtransData.transaction_id,
+        orderId
       })
     } else {
-      // CASH payment method
-      const payment = await prisma.payment.create({
+      // CASH payment method — buat payment dan langsung notifikasi merchant
+      await prisma.payment.create({
         data: {
           orderId: parseInt(orderId),
           method,
@@ -98,10 +115,16 @@ router.post('/', async (req, res) => {
         }
       })
 
-      // Emit sse event to notify cashier of a new CASH order that is ready to be handled
-      sseEvents.emit('new-order', order)
+      // Ambil order lengkap dengan payment
+      const orderWithPayment = await prisma.order.findUnique({
+        where: { id: parseInt(orderId) },
+        include: { items: { include: { product: true } }, table: true, payment: true }
+      })
 
-      return res.status(201).json(payment)
+      // Emit new-order dengan info payment lengkap agar merchant tahu ini CASH
+      sseEvents.emit('new-order', orderWithPayment)
+
+      return res.status(201).json(orderWithPayment?.payment)
     }
   } catch (e) {
     if (e.code === 'P2002') return res.status(400).json({ error: 'Pembayaran sudah ada untuk pesanan ini' })
@@ -208,8 +231,9 @@ router.post('/midtrans-webhook', async (req, res) => {
   }
 })
 
-// POST /api/payments/dev-simulate — simulasi pembayaran QRIS untuk testing
-// Mencatat pembayaran sebagai tervalidasi, tapi order tetap PENDING masuk antrean dapur
+// POST /api/payments/dev-simulate — konfirmasi pembayaran QRIS (simulasi)
+// Mengubah payment.amount dari 0 (pending) menjadi nilai sebenarnya (confirmed)
+// Order tetap PENDING agar masuk antrean dapur
 router.post('/dev-simulate', async (req, res) => {
   try {
     const { orderId } = req.body
@@ -217,42 +241,36 @@ router.post('/dev-simulate', async (req, res) => {
       return res.status(400).json({ error: 'orderId wajib diisi' })
     }
 
-    // Ambil order tanpa mengubah status — tetap PENDING agar masuk antrean
     const order = await prisma.order.findUnique({
       where: { id: parseInt(orderId) },
-      include: {
-        items: { include: { product: true } },
-        table: true,
-        payment: true
-      }
+      include: { items: { include: { product: true } }, table: true, payment: true }
     })
 
     if (!order) {
       return res.status(404).json({ error: 'Pesanan tidak ditemukan' })
     }
 
-    // Buat payment record jika belum ada (pembayaran tervalidasi)
-    const existingPayment = await prisma.payment.findUnique({
-      where: { orderId: parseInt(orderId) }
+    // Update payment: amount dari 0 (unconfirmed) ke nilai sebenarnya (confirmed)
+    // Ini yang membedakan QRIS pending vs QRIS lunas di merchant UI
+    await prisma.payment.upsert({
+      where: { orderId: parseInt(orderId) },
+      create: { orderId: parseInt(orderId), method: 'QRIS', amount: order.total },
+      update: { amount: order.total }
     })
 
-    if (!existingPayment) {
-      await prisma.payment.create({
-        data: {
-          orderId: parseInt(orderId),
-          method: 'QRIS',
-          amount: order.total
-        }
-      })
-    }
+    // Ambil order terbaru dengan payment yang sudah diupdate
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id: parseInt(orderId) },
+      include: { items: { include: { product: true } }, table: true, payment: true }
+    })
 
-    // Emit 'new-order' agar masuk antrean merchant (bukan order-updated)
-    sseEvents.emit('new-order', order)
+    // Emit order-updated agar merchant UI refresh tampilan (buka kunci pesanan)
+    sseEvents.emit('order-updated', updatedOrder)
 
-    console.log(`[QRIS] Pembayaran tervalidasi untuk order #${orderId}, masuk antrean`)
-    return res.status(200).json({ status: 'ok', message: `Pembayaran order #${orderId} tervalidasi, masuk antrean` })
+    console.log(`[QRIS] Pembayaran dikonfirmasi untuk order #${orderId}, pesanan terbuka untuk diproses`)
+    return res.status(200).json({ status: 'ok', message: `Pembayaran QRIS order #${orderId} dikonfirmasi` })
   } catch (error) {
-    console.error('[QRIS] Simulasi pembayaran gagal:', error)
+    console.error('[QRIS] Konfirmasi pembayaran gagal:', error)
     return res.status(500).json({ error: error.message })
   }
 })
