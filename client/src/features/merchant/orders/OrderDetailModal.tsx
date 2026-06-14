@@ -1,6 +1,6 @@
 import { X, Printer, CheckCircle2, ChefHat, ShoppingBag, UtensilsCrossed, QrCode, Banknote } from "lucide-react";
 import api from "@/lib/api";
-
+import { cn } from "@/lib/utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface OrderDetailModalProps {
