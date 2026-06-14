@@ -7,7 +7,8 @@ import {
   Clock,
   ChefHat,
   Utensils,
-  Receipt
+  Receipt,
+  Printer
 } from 'lucide-react';
 
 import { formatRupiah } from '@/lib/utils';
@@ -31,6 +32,157 @@ const OrderStatusPage: React.FC = () => {
   // ANIMATION
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const handlePrintReceipt = async () => {
+    try {
+      let storeName = "NEXA ORDER";
+      let storeAddress = "";
+      let storePhone = "";
+      try {
+        const profileRes = await api.get('/dashboard/profile');
+        if (profileRes.data) {
+          storeName = profileRes.data.name || "NEXA ORDER";
+          storeAddress = profileRes.data.address || "";
+          storePhone = profileRes.data.phone || "";
+        }
+      } catch (err) {
+        console.error("Gagal memuat profil toko untuk struk:", err);
+      }
+
+      const printWindow = window.open("", "_blank", "width=600,height=600");
+      if (!printWindow) {
+        alert("Gagal membuka jendela cetak. Pastikan pop-up blocker dinonaktifkan.");
+        return;
+      }
+
+      // Hitung pajak
+      const subtotal = order.total / 1.1;
+      const tax = order.total - subtotal;
+
+      const orderItemsHtml = order.items.map((item: any) => {
+        let toppings: any[] = [];
+        try {
+          if (item.toppings) toppings = JSON.parse(item.toppings);
+        } catch (e) {}
+
+        const toppingsHtml = toppings.map((t: any) => `
+          <div class="addon-item">+ ${t.name} (Rp ${t.price.toLocaleString('id-ID')})</div>
+        `).join("");
+
+        const noteHtml = item.note ? `<div class="note-item">Catatan: "${item.note}"</div>` : "";
+
+        return `
+          <tr>
+            <td colspan="3" class="bold" style="padding-top: 5px;">${item.product?.name || "Produk"}</td>
+          </tr>
+          <tr>
+            <td>${item.quantity} x Rp ${(item.product?.price || 0).toLocaleString('id-ID')}</td>
+            <td class="text-right"></td>
+            <td class="text-right bold">Rp ${item.subtotal.toLocaleString('id-ID')}</td>
+          </tr>
+          ${toppingsHtml}
+          ${noteHtml}
+        `;
+      }).join("");
+
+      const tableInfo = order.table 
+        ? `Meja: ${order.table.number}` 
+        : "Tipe: Takeaway";
+
+      const receiptHtml = `
+        <html>
+        <head>
+          <title>Struk #${order.id}</title>
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 11px;
+              line-height: 1.4;
+              color: #000;
+              margin: 8px;
+              width: 70mm;
+            }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .bold { font-weight: bold; }
+            .divider { border-top: 1px dashed #000; margin: 6px 0; }
+            .header { margin-bottom: 12px; }
+            .header h2 { margin: 0 0 3px 0; font-size: 14px; text-transform: uppercase; }
+            .header p { margin: 0; font-size: 9px; }
+            .info-table { width: 100%; font-size: 10px; margin-bottom: 8px; }
+            .items-table { width: 100%; font-size: 10px; border-collapse: collapse; }
+            .addon-item { font-size: 9px; padding-left: 8px; font-style: italic; }
+            .note-item { font-size: 9px; padding-left: 8px; font-style: italic; color: #555; }
+            .total-section { margin-top: 6px; }
+            .total-row { display: flex; justify-content: space-between; font-size: 10px; padding: 1px 0; }
+            .total-row.grand-total { font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 4px; margin-top: 4px; }
+            .footer { margin-top: 15px; font-size: 9px; }
+          </style>
+        </head>
+        <body>
+          <div class="header text-center">
+            <h2>${storeName}</h2>
+            ${storeAddress ? `<p>${storeAddress}</p>` : ""}
+            ${storePhone ? `<p>Telp: ${storePhone}</p>` : ""}
+          </div>
+          
+          <div class="divider"></div>
+          
+          <table class="info-table">
+            <tr><td>No. Order:</td><td class="text-right bold">#${order.id}</td></tr>
+            <tr><td>Tanggal:</td><td class="text-right">${new Date(order.createdAt).toLocaleString('id-ID')}</td></tr>
+            <tr><td>Pelanggan:</td><td class="text-right">${order.customerName || "Tamu"}</td></tr>
+            <tr><td>Layanan:</td><td class="text-right bold">${tableInfo}</td></tr>
+            <tr><td>Metode:</td><td class="text-right">${order.payment?.method || "BELUM BAYAR"}</td></tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="items-table">
+            ${orderItemsHtml}
+          </table>
+          
+          <div class="divider"></div>
+          
+          <div class="total-section">
+            <div class="total-row">
+              <span>Subtotal</span>
+              <span>Rp ${Math.round(subtotal).toLocaleString('id-ID')}</span>
+            </div>
+            <div class="total-row">
+              <span>Pajak (10%)</span>
+              <span>Rp ${Math.round(tax).toLocaleString('id-ID')}</span>
+            </div>
+            <div class="total-row grand-total">
+              <span>TOTAL</span>
+              <span>Rp ${(order.total || 0).toLocaleString('id-ID')}</span>
+            </div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="footer text-center">
+            <p>Terima kasih atas kunjungan Anda!</p>
+            <p>Powered by NexaOrder</p>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(receiptHtml);
+      printWindow.document.close();
+    } catch (e) {
+      console.error("Gagal mencetak struk belanja:", e);
+    }
+  };
+
   // MENDAPATKAN NOMOR MEJA DARI DATA ORDER
   const tableNumber = order?.table?.number 
     ? (order.table.number.toLowerCase().includes('meja') ? order.table.number : `Meja ${order.table.number}`)
@@ -43,43 +195,73 @@ const OrderStatusPage: React.FC = () => {
 
   }, []);
 
-  // FETCH ORDER + POLLING
+  // FETCH ORDER + SSE REAL-TIME CONNECTION
   useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let fallbackInterval: ReturnType<typeof setInterval> | null = null;
 
     const fetchOrder = async () => {
-
       try {
-
         const res = await api.get(`/orders/${orderId}`);
-
         setOrder(res.data);
-
         setLoading(false);
 
-        // STOP polling jika PAID
-        if (res.data.status === 'PAID') {
-          clearInterval(interval);
+        // Jika status sudah selesai (PAID / CANCELLED), tidak perlu polling/SSE lagi
+        if (res.data.status === 'PAID' || res.data.status === 'CANCELLED') {
+          if (eventSource) eventSource.close();
+          if (fallbackInterval) clearInterval(fallbackInterval);
         }
-
       } catch (err) {
-
-        console.log(err);
-
+        console.error("Gagal mengambil status order:", err);
         setError('Gagal mengambil status order');
-
         setLoading(false);
       }
     };
 
-    // FETCH PERTAMA
+    // 1. Ambil data order awal
     fetchOrder();
 
-    // POLLING 5 DETIK
-    const interval = setInterval(fetchOrder, 5000);
+    // 2. Hubungkan ke Server-Sent Events untuk update real-time
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const sseUrl = `${baseUrl}/sse?orderId=${orderId}`;
+    
+    try {
+      eventSource = new EventSource(sseUrl);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.event === 'order-updated' && payload.data) {
+            const updatedOrder = payload.data;
+            setOrder(updatedOrder);
+
+            // Jika status menjadi PAID atau CANCELLED, tutup koneksi dan interval
+            if (updatedOrder.status === 'PAID' || updatedOrder.status === 'CANCELLED') {
+              if (eventSource) eventSource.close();
+              if (fallbackInterval) clearInterval(fallbackInterval);
+            }
+          }
+        } catch (err) {
+          console.error("Error parsing SSE message in OrderStatusPage:", err);
+        }
+      };
+
+      eventSource.onerror = () => {
+        console.warn("Koneksi SSE terputus di OrderStatusPage. Mengaktifkan fallback polling...");
+        if (!fallbackInterval) {
+          fallbackInterval = setInterval(fetchOrder, 5000);
+        }
+      };
+    } catch (e) {
+      console.error("Browser tidak mendukung EventSource atau setup gagal. Mengaktifkan polling...", e);
+      fallbackInterval = setInterval(fetchOrder, 5000);
+    }
 
     // CLEANUP
-    return () => clearInterval(interval);
-
+    return () => {
+      if (eventSource) eventSource.close();
+      if (fallbackInterval) clearInterval(fallbackInterval);
+    };
   }, [orderId]);
 
   // LOADING
@@ -412,6 +594,17 @@ const OrderStatusPage: React.FC = () => {
               </span>
 
             </div>
+
+            {/* BUTTON PRINT STRUK */}
+            {order?.payment && (
+              <button
+                onClick={handlePrintReceipt}
+                className="mt-5 w-full py-3 px-4 border-2 border-brand-primary text-brand-primary font-bold rounded-2xl hover:bg-brand-primary/5 active:scale-95 transition flex items-center justify-center gap-2 text-sm shadow-sm"
+              >
+                <Printer className="w-4.5 h-4.5" />
+                Cetak Struk Pembayaran
+              </button>
+            )}
           </div>
 
         </div>

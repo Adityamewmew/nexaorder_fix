@@ -2,6 +2,7 @@ import { X, Printer, CheckCircle2, ChefHat, ShoppingBag, UtensilsCrossed, Credit
 import { Order, OrderStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import api from "@/lib/api";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface OrderDetailModalProps {
@@ -23,6 +24,153 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
   // Hitung ulang dari items untuk dapatkan pajak (asumsi pajak 10%)
   const subtotal = order.total / 1.1;
   const tax = order.total - subtotal;
+
+  const handlePrint = async () => {
+    try {
+      let storeName = "NEXA ORDER";
+      let storeAddress = "";
+      let storePhone = "";
+      try {
+        const profileRes = await api.get('/dashboard/profile');
+        if (profileRes.data) {
+          storeName = profileRes.data.name || "NEXA ORDER";
+          storeAddress = profileRes.data.address || "";
+          storePhone = profileRes.data.phone || "";
+        }
+      } catch (err) {
+        console.error("Gagal memuat profil toko untuk struk:", err);
+      }
+
+      const printWindow = window.open("", "_blank", "width=600,height=600");
+      if (!printWindow) {
+        alert("Gagal membuka jendela cetak. Pastikan pop-up blocker dinonaktifkan.");
+        return;
+      }
+
+      const orderItemsHtml = order.items.map((item: any) => {
+        let toppings: any[] = [];
+        try {
+          if (item.toppings) toppings = JSON.parse(item.toppings);
+        } catch (e) {}
+
+        const toppingsHtml = toppings.map((t: any) => `
+          <div class="addon-item">+ ${t.name} (Rp ${t.price.toLocaleString('id-ID')})</div>
+        `).join("");
+
+        const noteHtml = item.note ? `<div class="note-item">Catatan: "${item.note}"</div>` : "";
+
+        return `
+          <tr>
+            <td colspan="3" class="bold" style="padding-top: 5px;">${item.product?.name || "Produk"}</td>
+          </tr>
+          <tr>
+            <td>${item.quantity} x Rp ${(item.product?.price || 0).toLocaleString('id-ID')}</td>
+            <td class="text-right"></td>
+            <td class="text-right bold">Rp ${item.subtotal.toLocaleString('id-ID')}</td>
+          </tr>
+          ${toppingsHtml}
+          ${noteHtml}
+        `;
+      }).join("");
+
+      const tableInfo = order.table 
+        ? `Meja: ${order.table.number}` 
+        : "Tipe: Takeaway";
+
+      const receiptHtml = `
+        <html>
+        <head>
+          <title>Struk #${order.id}</title>
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 11px;
+              line-height: 1.4;
+              color: #000;
+              margin: 8px;
+              width: 70mm;
+            }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .bold { font-weight: bold; }
+            .divider { border-top: 1px dashed #000; margin: 6px 0; }
+            .header { margin-bottom: 12px; }
+            .header h2 { margin: 0 0 3px 0; font-size: 14px; text-transform: uppercase; }
+            .header p { margin: 0; font-size: 9px; }
+            .info-table { width: 100%; font-size: 10px; margin-bottom: 8px; }
+            .items-table { width: 100%; font-size: 10px; border-collapse: collapse; }
+            .addon-item { font-size: 9px; padding-left: 8px; font-style: italic; }
+            .note-item { font-size: 9px; padding-left: 8px; font-style: italic; color: #555; }
+            .total-section { margin-top: 6px; }
+            .total-row { display: flex; justify-content: space-between; font-size: 10px; padding: 1px 0; }
+            .total-row.grand-total { font-size: 11px; font-weight: bold; border-top: 1px dashed #000; padding-top: 4px; margin-top: 4px; }
+            .footer { margin-top: 15px; font-size: 9px; }
+          </style>
+        </head>
+        <body>
+          <div class="header text-center">
+            <h2>${storeName}</h2>
+            ${storeAddress ? `<p>${storeAddress}</p>` : ""}
+            ${storePhone ? `<p>Telp: ${storePhone}</p>` : ""}
+          </div>
+          
+          <div class="divider"></div>
+          
+          <table class="info-table">
+            <tr><td>No. Order:</td><td class="text-right bold">#${order.id}</td></tr>
+            <tr><td>Tanggal:</td><td class="text-right">${order.createdAt}</td></tr>
+            <tr><td>Pelanggan:</td><td class="text-right">${order.customerName || "Tamu"}</td></tr>
+            <tr><td>Layanan:</td><td class="text-right bold">${tableInfo}</td></tr>
+            <tr><td>Metode:</td><td class="text-right">${order.payment?.method || "BELUM BAYAR"}</td></tr>
+          </table>
+          
+          <div class="divider"></div>
+          
+          <table class="items-table">
+            ${orderItemsHtml}
+          </table>
+          
+          <div class="divider"></div>
+          
+          <div class="total-section">
+            <div class="total-row">
+              <span>Subtotal</span>
+              <span>Rp ${Math.round(subtotal).toLocaleString('id-ID')}</span>
+            </div>
+            <div class="total-row">
+              <span>Pajak (10%)</span>
+              <span>Rp ${Math.round(tax).toLocaleString('id-ID')}</span>
+            </div>
+            <div class="total-row grand-total">
+              <span>TOTAL</span>
+              <span>Rp ${(order.total || 0).toLocaleString('id-ID')}</span>
+            </div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="footer text-center">
+            <p>Terima kasih atas kunjungan Anda!</p>
+            <p>Powered by NexaOrder</p>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(receiptHtml);
+      printWindow.document.close();
+    } catch (e) {
+      console.error("Gagal mencetak struk:", e);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
@@ -73,8 +221,11 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
           </div>
           
           <div className="flex items-center gap-2">
-            <button className="p-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors flex items-center gap-2 font-semibold text-sm shadow-sm">
-              <Printer className="w-4 h-4" />
+            <button 
+              onClick={handlePrint}
+              className="p-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors flex items-center gap-2 font-semibold text-sm shadow-sm active:scale-95"
+            >
+              <Printer className="w-4 h-4 text-brand-primary" />
               <span className="hidden sm:inline">Struk</span>
             </button>
             <button onClick={onClose} className="p-2.5 bg-white border border-slate-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200 text-slate-400 rounded-lg transition-colors shadow-sm">

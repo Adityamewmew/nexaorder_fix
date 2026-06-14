@@ -1,6 +1,9 @@
-import React, { useState } from "react";
-import { Download, ChevronDown, ChevronRight } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Download, ChevronDown, ChevronRight, FileText, Table, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // Using the same structure as in SalesReport.tsx
 interface SalesTableProps {
@@ -25,14 +28,26 @@ interface SalesTableProps {
 export default function SalesTable({ data }: SalesTableProps) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const itemsPerPage = 10;
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowExportDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleRow = (id: string) => {
     if (expandedRow === id) setExpandedRow(null);
     else setExpandedRow(id);
   };
 
-  const handleExport = () => {
+  const handleExportCSV = () => {
     if (data.length === 0) return;
 
     // Menyiapkan header
@@ -77,6 +92,127 @@ export default function SalesTable({ data }: SalesTableProps) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setShowExportDropdown(false);
+  };
+
+  const handleExportExcel = () => {
+    if (data.length === 0) return;
+
+    // 1. Metadata / Summary
+    const summaryData = [
+      ["LAPORAN PENJUALAN NEXAORDER"],
+      [`Tanggal Cetak: ${new Date().toLocaleDateString("id-ID")}`],
+      [],
+      ["Ringkasan Penjualan"],
+      ["Total Transaksi", data.length],
+      ["Total Item Terjual", data.reduce((s, r) => s + r.itemsCount, 0)],
+      ["Total Pendapatan (Rp)", data.reduce((s, r) => s + r.total, 0)],
+      [],
+      ["Data Transaksi"]
+    ];
+
+    // 2. Headers
+    const headers = [
+      "No Pesanan",
+      "Tanggal",
+      "Total Item",
+      "Total Penjualan (Rp)",
+      "Metode Pembayaran",
+      "Tipe Transaksi",
+      "No Meja",
+      "Status"
+    ];
+
+    // 3. Rows
+    const rows = data.map(row => [
+      row.id,
+      row.date,
+      row.itemsCount,
+      row.total,
+      row.payment,
+      row.type,
+      row.table,
+      row.status
+    ]);
+
+    // Combine data
+    const worksheetData = [...summaryData, headers, ...rows];
+    
+    // Create Excel worksheet & workbook
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Penjualan");
+
+    // Write file
+    XLSX.writeFile(workbook, `Laporan_Penjualan_${new Date().toISOString().split('T')[0]}.xlsx`);
+    setShowExportDropdown(false);
+  };
+
+  const handleExportPDF = () => {
+    if (data.length === 0) return;
+
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("LAPORAN PENJUALAN NEXAORDER", 14, 20);
+    
+    // Date print
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString("id-ID")} ${new Date().toLocaleTimeString("id-ID")}`, 14, 26);
+    
+    // Summary Box
+    doc.setDrawColor(230, 235, 245);
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, 32, 182, 22, "FD");
+    
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(51, 65, 85);
+    doc.text("RINGKASAN LAPORAN", 18, 38);
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Transaksi: ${data.length}`, 18, 44);
+    doc.text(`Total Item Terjual: ${data.reduce((s, r) => s + r.itemsCount, 0)}`, 18, 49);
+    
+    const totalRev = data.reduce((s, r) => s + r.total, 0);
+    doc.text(`Total Pendapatan: Rp ${totalRev.toLocaleString('id-ID')}`, 100, 44);
+    
+    // Table Headers
+    const headers = [
+      ["No Pesanan", "Tanggal", "Item", "Total (Rp)", "Pembayaran", "Tipe", "Meja", "Status"]
+    ];
+
+    // Table Rows
+    const rows = data.map(row => [
+      row.id,
+      row.date,
+      row.itemsCount,
+      row.total.toLocaleString('id-ID'),
+      row.payment,
+      row.type,
+      row.table,
+      row.status
+    ]);
+
+    // Generate Table
+    autoTable(doc, {
+      startY: 60,
+      head: headers,
+      body: rows,
+      theme: 'striped',
+      headStyles: { fillColor: [79, 70, 229], fontStyle: 'bold' }, // brand-primary indigo-600
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: {
+        3: { halign: 'right' }
+      }
+    });
+
+    doc.save(`Laporan_Penjualan_${new Date().toISOString().split('T')[0]}.pdf`);
+    setShowExportDropdown(false);
   };
 
   // Logika Pagination
@@ -94,13 +230,45 @@ export default function SalesTable({ data }: SalesTableProps) {
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
       <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
         <h3 className="font-bold text-lg text-slate-800">Data Penjualan</h3>
-        <button 
-          onClick={handleExport}
-          className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 text-sm shadow-sm"
-        >
-          <Download className="w-4 h-4" />
-          Export Data
-        </button>
+        
+        {/* Export Dropdown Wrapper */}
+        <div className="relative" ref={dropdownRef}>
+          <button 
+            onClick={() => setShowExportDropdown(!showExportDropdown)}
+            className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 text-sm shadow-sm active:scale-95"
+          >
+            <Download className="w-4 h-4 text-brand-primary" />
+            <span>Export Laporan</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+
+          {showExportDropdown && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-30 animate-in fade-in slide-in-from-top-2 duration-150">
+              <button
+                onClick={handleExportExcel}
+                className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-brand-primary font-medium text-left transition-colors"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                <span>Export ke Excel (.xlsx)</span>
+              </button>
+              <button
+                onClick={handleExportPDF}
+                className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-brand-primary font-medium text-left transition-colors"
+              >
+                <FileText className="w-4 h-4 text-red-500" />
+                <span>Export ke PDF (.pdf)</span>
+              </button>
+              <div className="border-t border-slate-100 my-1"></div>
+              <button
+                onClick={handleExportCSV}
+                className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-brand-primary font-medium text-left transition-colors"
+              >
+                <Table className="w-4 h-4 text-blue-500" />
+                <span>Export ke CSV (.csv)</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto">
