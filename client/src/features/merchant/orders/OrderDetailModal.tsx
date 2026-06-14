@@ -1,5 +1,4 @@
 import { X, Printer, CheckCircle2, ChefHat, ShoppingBag, UtensilsCrossed, CreditCard, QrCode, Banknote } from "lucide-react";
-import { Order, OrderStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import api from "@/lib/api";
