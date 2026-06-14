@@ -18,8 +18,6 @@ export default function OrderDetailModal({ order, isOpen, onClose, onUpdateStatu
 
   if (!isOpen || !order) return null;
 
-  const isTakeaway = order.customerName?.toLowerCase().includes("takeaway");
-  
   // Hitung ulang dari items untuk dapatkan pajak (asumsi pajak 10%)
   const subtotal = order.total / 1.1;
   const tax = order.total - subtotal;
