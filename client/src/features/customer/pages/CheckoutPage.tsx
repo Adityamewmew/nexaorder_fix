@@ -297,7 +297,7 @@ const CheckoutPage: React.FC = () => {
         </p>
 
         {/* DEV ONLY: Tombol simulasi pembayaran untuk testing */}
-        {import.meta.env.DEV && qrData && (
+        {new URLSearchParams(window.location.search).get('dev') === '1' && qrData && (
           <button
             onClick={async () => {
               setIsSimulating(true);
