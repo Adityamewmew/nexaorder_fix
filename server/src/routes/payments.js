@@ -208,8 +208,8 @@ router.post('/midtrans-webhook', async (req, res) => {
   }
 })
 
-// POST /api/payments/dev-simulate — simulasi pembayaran QRIS untuk development/testing
-// ⚠️ Endpoint ini hanya untuk keperluan testing. Jangan digunakan di production.
+// POST /api/payments/dev-simulate — simulasi pembayaran QRIS untuk testing
+// Mencatat pembayaran sebagai tervalidasi, tapi order tetap PENDING masuk antrean dapur
 router.post('/dev-simulate', async (req, res) => {
   try {
     const { orderId } = req.body
@@ -217,9 +217,9 @@ router.post('/dev-simulate', async (req, res) => {
       return res.status(400).json({ error: 'orderId wajib diisi' })
     }
 
-    const order = await prisma.order.update({
+    // Ambil order tanpa mengubah status — tetap PENDING agar masuk antrean
+    const order = await prisma.order.findUnique({
       where: { id: parseInt(orderId) },
-      data: { status: 'PAID' },
       include: {
         items: { include: { product: true } },
         table: true,
@@ -227,7 +227,11 @@ router.post('/dev-simulate', async (req, res) => {
       }
     })
 
-    // Buat payment record jika belum ada
+    if (!order) {
+      return res.status(404).json({ error: 'Pesanan tidak ditemukan' })
+    }
+
+    // Buat payment record jika belum ada (pembayaran tervalidasi)
     const existingPayment = await prisma.payment.findUnique({
       where: { orderId: parseInt(orderId) }
     })
@@ -242,18 +246,16 @@ router.post('/dev-simulate', async (req, res) => {
       })
     }
 
-    // Kirim SSE ke merchant seperti webhook asli
-    sseEvents.emit('order-updated', order)
+    // Emit 'new-order' agar masuk antrean merchant (bukan order-updated)
+    sseEvents.emit('new-order', order)
 
-    console.log(`[DEV] Simulasi pembayaran berhasil untuk order #${orderId}`)
-    return res.status(200).json({ status: 'ok', message: `Order #${orderId} berhasil disimulasikan sebagai PAID` })
+    console.log(`[QRIS] Pembayaran tervalidasi untuk order #${orderId}, masuk antrean`)
+    return res.status(200).json({ status: 'ok', message: `Pembayaran order #${orderId} tervalidasi, masuk antrean` })
   } catch (error) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Pesanan tidak ditemukan' })
-    }
-    console.error('[DEV] Simulasi pembayaran gagal:', error)
+    console.error('[QRIS] Simulasi pembayaran gagal:', error)
     return res.status(500).json({ error: error.message })
   }
 })
+
 
 module.exports = router
