@@ -85,10 +85,8 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Emit new order to SSE clients
-    const { sseEvents } = require('../sse')
-    sseEvents.emit('new-order', order)
-
+    // Jangan emit SSE di sini — merchant baru diberi tahu setelah pembayaran dikonfirmasi
+    // (CASH: via payments.js, QRIS: via dev-simulate / midtrans webhook)
     res.status(201).json(order)
   } catch (e) {
     res.status(500).json({ error: e.message })
