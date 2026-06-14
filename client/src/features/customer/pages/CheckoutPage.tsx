@@ -296,15 +296,15 @@ const CheckoutPage: React.FC = () => {
           GoPay · Dana · OVO · ShopeePay · LinkAja<br />dan semua aplikasi yang mendukung QRIS
         </p>
 
-        {/* DEV ONLY: Tombol simulasi pembayaran untuk testing */}
-        {new URLSearchParams(window.location.search).get('dev') === '1' && qrData && (
+        {/* Tombol simulasi pembayaran QRIS */}
+        {qrData && (
           <button
             onClick={async () => {
               setIsSimulating(true);
               try {
                 await api.post('/payments/dev-simulate', { orderId: qrData.orderId });
               } catch (err) {
-                console.error('[DEV] Simulasi gagal:', err);
+                console.error('Simulasi gagal:', err);
                 setIsSimulating(false);
               }
             }}
@@ -316,7 +316,7 @@ const CheckoutPage: React.FC = () => {
             ) : (
               '⚡'
             )}
-            {isSimulating ? 'Memproses...' : '[DEV] Simulasi Bayar'}
+            {isSimulating ? 'Memproses...' : 'Paid Simulation'}
           </button>
         )}
 
