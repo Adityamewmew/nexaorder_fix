@@ -12,6 +12,7 @@ Dokumen ini merangkum semua API yang benar-benar ada di backend project Nexa Ord
   - static file untuk gambar di `/uploads`
   - Server-Sent Events di `/api/sse`
   - background worker untuk auto-cancel pesanan pending
+  - endpoint health check di `GET /api/health` untuk memantau status server
 
 ### Modul API
 Berikut modul-modul utama yang ada di backend:
@@ -59,6 +60,7 @@ Berikut modul-modul utama yang ada di backend:
 - **Upload**: Semua gambar (produk, foto user, logo toko) diunggah via `POST /api/upload`, disimpan di folder `uploads/`, dan diakses lewat URL `/uploads/:filename`.
 - **Store Profile**: Endpoint `GET /api/dashboard/profile` dan `PUT /api/dashboard/profile` mengelola profil toko (nama, deskripsi, logo, alamat, jam buka-tutup). `GET` bersifat public; `PUT` memerlukan auth.
 - API orders, payments, dan SSE dipakai untuk notifikasi real-time cashier.
+- **Background Worker (Auto-Cancel)**: Worker berjalan di background secara periodik untuk membatalkan order yang sudah terlalu lama dalam status `PENDING`. Saat order di-cancel otomatis, stok setiap produk dalam order dikembalikan dan status produk diset ke `tersedia`, lalu event SSE `order-updated` di-emit ke merchant.
 
 ## 2. Base URL
 
