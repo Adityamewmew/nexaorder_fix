@@ -13,6 +13,23 @@ Dokumen ini merangkum semua API yang benar-benar ada di backend project Nexa Ord
   - Server-Sent Events di `/api/sse`
   - background worker untuk auto-cancel pesanan pending
 
+### Modul API
+Berikut modul-modul utama yang ada di backend:
+
+| Modul | Endpoint Prefix | Keterangan |
+|---|---|---|
+| Auth | `/api/auth` | Login, register, ganti password |
+| Categories | `/api/categories` | CRUD kategori menu (GET public, POST/DELETE admin only) |
+| Products | `/api/products` | CRUD produk termasuk modifier groups dan manajemen stok |
+| Tables | `/api/tables` | CRUD meja dengan token QR, validasi token untuk customer |
+| Orders | `/api/orders` | Buat pesanan (public), lihat & update status (auth) |
+| Payments | `/api/payments` | CASH & QRIS via Midtrans, webhook, simulasi dev |
+| Users / Staff | `/api/users` | Admin kelola akun kasir/staff: list, edit, reset password, hapus |
+| Dashboard | `/api/dashboard` | Statistik harian, laporan sales, dan profil toko |
+| Upload | `/api/upload` | Upload gambar (produk, foto user, logo toko), max 2 MB |
+| SSE | `/api/sse` | Real-time notifikasi ke merchant via Server-Sent Events |
+| Health | `/api/health` | Health check server |
+
 ### Domain Data Utama
 - `User`: akun login untuk admin / kasir.
 - `Category`: kategori menu.
@@ -34,10 +51,13 @@ Dokumen ini merangkum semua API yang benar-benar ada di backend project Nexa Ord
   - `CASHIER`
 
 ### Catatan Implementasi Penting
-- Endpoint `PATCH /api/auth/change-password` dipanggil frontend, tetapi belum ada di backend.
 - Komentar pada beberapa route tidak selalu sama dengan middleware yang dipasang.
-  - Contoh: `PUT /api/dashboard/profile` dikomentari admin only, tetapi implementasinya hanya `authMiddleware`.
-  - Contoh: `POST /api/upload` dikomentari admin dan kasir, tetapi implementasinya hanya `authMiddleware`.
+  - `PUT /api/dashboard/profile` dikomentari admin only, tetapi implementasinya hanya `authMiddleware` (semua user yang login bisa mengakses).
+  - `POST /api/upload` dikomentari admin dan kasir, tetapi implementasinya hanya `authMiddleware`.
+- **Categories vs Products**: `Category` dan `Product` adalah entitas terpisah dengan endpoint CRUD masing-masing. Admin mengelola kategori via `/api/categories`, dan produk (beserta modifier groups-nya) via `/api/products`.
+- **Users/Staff Management**: Endpoint `/api/users` dipakai admin untuk mengelola akun kasir — termasuk list, edit profil, reset password, dan hapus. Aturan otorisasinya: user biasa hanya boleh update dirinya sendiri, admin boleh update siapapun.
+- **Upload**: Semua gambar (produk, foto user, logo toko) diunggah via `POST /api/upload`, disimpan di folder `uploads/`, dan diakses lewat URL `/uploads/:filename`.
+- **Store Profile**: Endpoint `GET /api/dashboard/profile` dan `PUT /api/dashboard/profile` mengelola profil toko (nama, deskripsi, logo, alamat, jam buka-tutup). `GET` bersifat public; `PUT` memerlukan auth.
 - API orders, payments, dan SSE dipakai untuk notifikasi real-time cashier.
 
 ## 2. Base URL
