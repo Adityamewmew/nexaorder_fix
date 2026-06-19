@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Edit2, Image as ImageIcon, Minus, Settings2, Trash2 } from "lucide-react";
 import { Product } from "@/types";
@@ -19,6 +20,7 @@ export default function MenuGrid({
   onDelete
 }: MenuGridProps) {
   const navigate = useNavigate();
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -26,8 +28,13 @@ export default function MenuGrid({
         <div key={product.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col">
           {/* Image Area */}
           <div className="h-48 w-full bg-slate-100 relative">
-            {product.imageUrl ? (
-              <img src={product.imageUrl.startsWith('http') ? product.imageUrl : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + product.imageUrl : `http://localhost:5000${product.imageUrl}`)} alt={product.name} className={cn("w-full h-full object-cover transition-opacity", product.stock === 0 && "opacity-50 grayscale")} />
+            {product.imageUrl && !brokenImages[product.id] ? (
+              <img 
+                src={product.imageUrl.startsWith('http') ? product.imageUrl : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + product.imageUrl : `http://localhost:5000${product.imageUrl}`)} 
+                alt={product.name} 
+                onError={() => setBrokenImages(prev => ({ ...prev, [product.id]: true }))}
+                className={cn("w-full h-full object-cover transition-opacity", product.stock === 0 && "opacity-50 grayscale")} 
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-slate-400">
                 <ImageIcon className="w-10 h-10 opacity-50" />
