@@ -33,10 +33,54 @@ const upload = multer({
 })
 
 // POST /api/upload — admin dan kasir
-router.post('/', authMiddleware, upload.single('image'), (req, res) => {
+router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Tidak ada file yang diupload' })
-  const url = `/uploads/${req.file.filename}`
-  res.json({ url })
+
+  const apiKey = process.env.IMGBB_API_KEY
+
+  if (apiKey) {
+    try {
+      // 1. Baca file dan konversi ke base64
+      const fileBase64 = fs.readFileSync(req.file.path, 'base64')
+
+      // 2. Kirim ke API ImgBB
+      const body = new URLSearchParams()
+      body.append('image', fileBase64)
+
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      // 3. Hapus file lokal setelah berhasil diupload ke ImgBB
+      fs.unlinkSync(req.file.path)
+
+      // 4. Kirim URL dari ImgBB ke klien
+      return res.json({ url: result.data.url })
+    } catch (err) {
+      console.error("Gagal mengunggah gambar ke ImgBB:", err.message)
+      // Hapus file lokal jika terjadi error
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path)
+      }
+      return res.status(500).json({ error: 'Gagal mengunggah gambar ke cloud storage: ' + err.message })
+    }
+  } else {
+    // Fallback ke penyimpanan lokal jika API Key tidak disediakan
+    console.warn("Peringatan: IMGBB_API_KEY tidak dikonfigurasi di .env. File disimpan di penyimpanan lokal.")
+    const url = `/uploads/${req.file.filename}`
+    return res.json({ url })
+  }
 })
 
 module.exports = router
