@@ -28,8 +28,8 @@ const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ categories, activeCat
     <div className="hidden md:flex flex-col w-64 bg-gradient-to-b from-[#0A3464] to-[#1469CA] min-h-screen text-white sticky top-0 h-screen overflow-y-auto">
       {/* Logo Area */}
       <div className="p-6 flex items-center gap-3 border-b border-white/10">
-        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-brand-primary font-black text-xl">
-          N
+        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1 shadow-sm shrink-0">
+          <img src="/apple-touch-icon.png" alt="Nexa Order Logo" className="w-full h-full object-contain" />
         </div>
         <h1 className="text-xl font-bold tracking-wider">NEXA ORDER</h1>
       </div>

@@ -45,7 +45,9 @@ export default function PlatformLogin() {
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-white opacity-5 rounded-full blur-3xl"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-amber-500 opacity-10 rounded-full blur-3xl"></div>
         <div className="relative z-10">
-          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-[#0B3B60] font-bold text-3xl mb-8 shadow-lg">N</div>
+          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center p-2 mb-8 shadow-lg">
+            <img src="/apple-touch-icon.png" alt="Nexa Order Logo" className="w-full h-full object-contain" />
+          </div>
           <h1 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
             Nexa Order <br />
             <span className="text-amber-500">Superadmin Panel</span>
@@ -62,7 +64,9 @@ export default function PlatformLogin() {
 
       <div className="flex-1 bg-slate-50 flex items-center justify-center p-6 md:p-12 relative">
         <div className="absolute top-8 left-8 md:hidden flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#0B3B60] rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm">N</div>
+          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-0.5 shadow-sm">
+            <img src="/apple-touch-icon.png" alt="Nexa Order Logo" className="w-full h-full object-contain" />
+          </div>
           <span className="font-bold text-xl text-[#0B3B60]">NEXA ORDER</span>
         </div>
 

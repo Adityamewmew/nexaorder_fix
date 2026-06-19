@@ -28,9 +28,7 @@ export default function PlatformLayout() {
   const renderSidebarContent = () => (
     <>
       <div className="p-6 flex items-center gap-3 border-b border-white/10">
-        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-brand-primary font-bold text-xl shrink-0">
-          N
-        </div>
+        <img src="/apple-touch-icon.png" alt="Nexa Order Logo" className="w-8 h-8 rounded-lg object-contain bg-white p-0.5 shadow-sm shrink-0" />
         <span className="font-bold text-xl tracking-wide truncate">NEXA ORDER</span>
       </div>
 
@@ -127,7 +125,7 @@ export default function PlatformLayout() {
           
           {/* Teks logo khusus mobile di topbar */}
           <div className="sm:hidden font-bold text-brand-primary flex items-center gap-2">
-             <div className="w-6 h-6 bg-brand-primary rounded-full flex items-center justify-center text-white text-xs">N</div>
+             <img src="/apple-touch-icon.png" alt="Nexa Order Logo" className="w-6 h-6 rounded-md object-contain bg-white p-0.5" />
              NEXA
           </div>
         </header>

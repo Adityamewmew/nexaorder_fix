@@ -49,8 +49,8 @@ export default function MerchantLogin() {
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-white opacity-5 rounded-full blur-3xl"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-secondary opacity-20 rounded-full blur-3xl"></div>
         <div className="relative z-10">
-          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-8 shadow-lg">
-            <Store className="w-8 h-8 text-brand-secondary" />
+          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center p-2 mb-8 shadow-lg">
+            <img src="/apple-touch-icon.png" alt="Nexa Order Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
             Nexa Order <br />
@@ -68,8 +68,8 @@ export default function MerchantLogin() {
 
       <div className="flex-1 bg-slate-50 flex items-center justify-center p-6 md:p-12 relative">
         <div className="absolute top-8 left-8 md:hidden flex items-center gap-3">
-          <div className="w-8 h-8 bg-brand-primary rounded-xl flex items-center justify-center text-white shadow-sm">
-            <Store className="w-4 h-4" />
+          <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center p-0.5 shadow-sm">
+            <img src="/apple-touch-icon.png" alt="Nexa Order Logo" className="w-full h-full object-contain" />
           </div>
           <span className="font-bold text-xl text-brand-primary">NEXA ORDER</span>
         </div>

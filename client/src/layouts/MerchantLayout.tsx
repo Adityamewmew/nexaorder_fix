@@ -145,9 +145,7 @@ export default function MerchantLayout() {
   const renderSidebarContent = () => (
     <>
       <div className="p-6 flex items-center gap-3 border-b border-white/10">
-        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-brand-primary font-bold text-xl shrink-0 shadow-sm">
-          <Store className="w-4 h-4" />
-        </div>
+        <img src="/apple-touch-icon.png" alt="Nexa Order Logo" className="w-8 h-8 rounded-lg object-contain bg-white p-0.5 shadow-sm shrink-0" />
         <span className="font-bold text-xl tracking-wide truncate">MERCHANT</span>
       </div>
 
@@ -287,7 +285,7 @@ export default function MerchantLayout() {
           
           {/* Logo khusus mobile */}
           <div className="md:hidden font-bold text-brand-primary flex items-center gap-2">
-            <Store className="w-5 h-5" />
+            <img src="/apple-touch-icon.png" alt="Nexa Order Logo" className="w-6 h-6 rounded-md object-contain bg-white p-0.5" />
             NEXA ORDER
           </div>
         </header>
