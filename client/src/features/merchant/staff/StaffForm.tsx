@@ -233,7 +233,7 @@ export default function StaffForm() {
                   </div>
                 ) : formData.photoUrl ? (
                   <div className="absolute inset-0 w-full h-full p-2">
-                    <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + formData.photoUrl : `http://localhost:5000${formData.photoUrl}`} alt="Preview" className="w-full h-full object-cover rounded-xl shadow-sm" />
+                    <img src={formData.photoUrl.startsWith('http') ? formData.photoUrl : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + formData.photoUrl : `http://localhost:5000${formData.photoUrl}`)} alt="Preview" className="w-full h-full object-cover rounded-xl shadow-sm" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl m-2 z-0">
                       <span className="text-white font-semibold text-sm flex items-center gap-2">
                         <ImagePlus className="w-4 h-4" /> Ganti Foto

@@ -52,7 +52,7 @@ export default function MenuBasicInfo({ formData, categories, handleInputChange,
               </div>
             ) : formData.imageUrl ? (
               <div className="absolute inset-0 w-full h-full p-2">
-                <img src={import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + formData.imageUrl : `http://localhost:5000${formData.imageUrl}`} alt="Preview" className="w-full h-full object-cover rounded-xl shadow-sm" />
+                <img src={formData.imageUrl.startsWith('http') ? formData.imageUrl : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + formData.imageUrl : `http://localhost:5000${formData.imageUrl}`)} alt="Preview" className="w-full h-full object-cover rounded-xl shadow-sm" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl m-2">
                   <span className="text-white font-semibold text-sm flex items-center gap-2">
                     <ImagePlus className="w-4 h-4" /> Ganti Foto
