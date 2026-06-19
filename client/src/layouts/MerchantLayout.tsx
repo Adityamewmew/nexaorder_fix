@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { 
   LayoutDashboard, ClipboardList, Package, 
   RectangleHorizontal, Users, BarChart3, 
-  LogOut, Menu, X, Store, User 
+  LogOut, Menu, X, User 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/features/auth/authSlice";
